@@ -27,3 +27,4 @@ executable mmaker
                      , bytestring
                      , text
                      , stm
+                     , unagi-chan
