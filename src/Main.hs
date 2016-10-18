@@ -25,48 +25,42 @@ import           App.Common
 import           App.Matchmake
 
 restApp :: TVar World -> IO Application
+
+
 restApp world = scottyApp $ do
-  middleware logStdout
-  middleware $ staticPolicy $ addBase "static"
+    middleware logStdout
+    middleware $ staticPolicy $ addBase "static"
 
-  get "/lobby" $ do
-    state <- liftIO $ readTVarIO world
-    text $ LazyText.pack $ show state
-
-disconnectGame :: Game -> TVar World -> IO ()
-disconnectGame game world = do
-  forM_ (gameUsers game) disconnectUser
-  atomically $ modifyTVar world (\w -> w { worldGames = Prelude.filter (/= game) (worldGames w) })
-
+    get "/lobby" $ do
+        state <- liftIO $ readTVarIO world
+        text $ LazyText.pack $ show state
 
 wsApp :: TVar World -> ServerApp
 wsApp world pending = do
-  let request = pendingRequest pending
-      path    = requestPath request
+    let request = pendingRequest pending
+        path = requestPath request
+    print request
+    print path
 
-  print request
-  print path
+    conn <- acceptRequest pending
+    name <- receiveData conn
 
-  conn <- acceptRequest pending
-  name <- receiveData conn
-  let user = User name conn
+    let user = User name conn
+    liftIO $ putStrLn $ show user <> " connected"
 
-  liftIO $ putStrLn $ show user <> " connected"
+    -- keep connection alive
+    forkPingThread conn 10
 
-  -- keep connection alive
-  forkPingThread conn 10
-
-  -- add user to lobby
-  atomically $
-    modifyTVar world (\w@(World lobby _) -> w { worldLobby = user : lobby })
-
-  case path of
-    "/chat"  -> wsChat user world
-    "/match" -> wsMatchmake user world
-    _ -> return ()
+    -- add user to lobby
+    atomically $
+        modifyTVar world (\w@(World lobby _) -> w { worldLobby = user : lobby})
+    case path of
+        "/chat"  -> wsChat user world
+        "/match" -> wsMatchmake user world
+        _        -> return ()
 
 main :: IO ()
 main = do
-  world <- newTVarIO defaultWorld
-  rest  <- restApp world
-  run 3000 $ websocketsOr defaultConnectionOptions (wsApp world) rest
+    world <- newTVarIO defaultWorld
+    rest <- restApp world
+    run 3000 $ websocketsOr defaultConnectionOptions (wsApp world) rest
