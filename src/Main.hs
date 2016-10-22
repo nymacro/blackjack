@@ -25,8 +25,6 @@ import           App.Common
 import           App.Matchmake
 
 restApp :: TVar World -> IO Application
-
-
 restApp world = scottyApp $ do
     middleware logStdout
     middleware $ staticPolicy $ addBase "static"

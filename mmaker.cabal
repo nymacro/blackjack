@@ -28,3 +28,4 @@ executable mmaker
                      , text
                      , stm
                      , unagi-chan
+                     , random

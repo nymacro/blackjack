@@ -47,8 +47,8 @@ sendTo f users msg = do
 -- | Disconnect user
 disconnectUser :: User -> IO ()
 disconnectUser (User name conn) = do
-    print $ name <> " disconnected"
-    sendClose conn ("" :: ByteString)
+    putStrLn $ show name <> " disconnected"
+    sendClose conn ("BYE" :: ByteString)
 
 -- | splitAt which returns a Maybe
 splitAtMaybe :: Int -> [a] -> Maybe ([a], [a])

@@ -12,6 +12,8 @@ import           Network.WebSockets
 
 import           App.Common
 
+import Game.Blackjack
+
 disconnectGame :: Game -> TVar World -> IO ()
 disconnectGame game world = do
     forM_ (gameUsers game) disconnectUser
@@ -31,7 +33,6 @@ findMatch world = do
             writeTVar world w { worldLobby = rest}
             return $ Just game
 
-
 runGame :: Game -> TVar World -> IO ()
 runGame game world = do
     putStrLn "Running Game"
@@ -42,12 +43,12 @@ runGame game world = do
         modifyTVar world (\w@(World _ games) -> w { worldGames = game : games})
 
     -- run the game
-    forever $
-        do forM_ (gameUsers game) $
-               \(User _ conn) -> do
-                   sendTextData conn ("> YOUR TURN" :: ByteString)
-                   msg <- receiveData conn
-                   sendTo (const True) (gameUsers game) msg
+    forever $ do
+        forM_ (gameUsers game) $
+            \(User _ conn) -> do
+                sendTextData conn ("> YOUR TURN" :: ByteString)
+                msg <- receiveData conn
+                sendTo (const True) (gameUsers game) msg
 
 -- matchmaking websockets app
 wsMatchmake :: User -> TVar World -> IO ()
