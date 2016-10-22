@@ -14,7 +14,7 @@ import           App.Common
 -- chat websockets app
 wsChat :: User -> TVar World -> IO ()
 wsChat (User name conn) world = do
-    forever $ do
-        msg <- receiveData conn
-        w <- readTVarIO world
-        sendTo (const True) (worldLobby w) (encodeUtf8 name <> ":" <> msg)
+  forever $ do
+    msg <- receiveData conn
+    w <- readTVarIO world
+    sendTo (const True) (worldLobby w) (encodeUtf8 name <> ":" <> msg)

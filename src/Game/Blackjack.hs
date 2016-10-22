@@ -8,94 +8,92 @@ import           Data.Monoid
 import           System.Random
 
 -- | A card's suit
-data Suit
-    = Spades
-    | Hearts
-    | Clubs
-    | Diamonds
-    deriving (Show,Eq)
+data Suit = Spades
+          | Hearts
+          | Clubs
+          | Diamonds
+  deriving (Show, Eq)
 
 -- | A card's color
-data Color
-    = Red
-    | Black
-    deriving (Show,Eq)
+data Color = Red
+           | Black
+  deriving (Show, Eq)
 
+-- | The color of a Suit
 color :: Suit -> Color
-color Spades   = Black
-color Clubs    = Black
-color Hearts   = Red
+color Spades = Black
+color Clubs = Black
+color Hearts = Red
 color Diamonds = Red
 
 -- | A card's rank
-data Rank
-    = Two
-    | Three
-    | Four
-    | Five
-    | Six
-    | Seven
-    | Eight
-    | Nine
-    | Ten
-    | Jack
-    | Queen
-    | King
-    | Ace
-    deriving (Show,Eq,Enum)
+data Rank = Two
+          | Three
+          | Four
+          | Five
+          | Six
+          | Seven
+          | Eight
+          | Nine
+          | Ten
+          | Jack
+          | Queen
+          | King
+          | Ace
+  deriving (Show, Eq, Enum)
 
 -- | The numeric value for the card
 value :: Rank -> [Int]
-value Jack  = [10]
+value Jack = [10]
 value Queen = [10]
-value King  = [10]
-value Ace   = [1, 10]
-value x     = [fromEnum x + 2]
+value King = [10]
+value Ace = [1, 10]
+value x = [fromEnum x + 2]
 
 -- | A card
-data Card
-    = Card Rank Suit
-    deriving (Show,Eq)
+data Card = Card Rank Suit
+  deriving (Show, Eq)
 
 -- | A card deck
-type Deck
-    = [Card]
+type Deck = [Card]
 
 -- | Return a ordered deck of 52 cards
 defaultDeck :: Deck
-defaultDeck =
-    deck
+defaultDeck = deck
   where
     ranks = [Two, Three, Four, Five, Six, Seven, Eight, Nine, Ten, Jack, Queen, King, Ace]
     suits = [Spades, Diamonds, Clubs, Hearts]
-    deck  = [Card rank suit | rank <- ranks, suit <- suits]
-
+    deck = [ Card rank suit
+           | rank <- ranks
+           , suit <- suits ]
 
 -- | Shuffle deck of cards
 shuffleDeck :: Deck -> IO Deck
 shuffleDeck = shuffle []
 
 -- | Shuffle a list
-shuffle :: [a] -> [a] -> IO [a]
+-- TODO maybe make this faster
+shuffle :: [a]    -- ^ Results accumulator
+        -> [a]    -- ^ List to shuffle
+        -> IO [a] -- ^ Shuffled list result
 shuffle s [] = return s
 shuffle shuffled deck = do
   let l = length deck
   ix <- getStdRandom $ randomR (1, l)
-  let (front, back')   = splitAt (ix - 1) deck
+  let (front, back') = splitAt (ix - 1) deck
       (card:_, back) = splitAt 1 back'
   shuffle (card : shuffled) (front <> back)
 
 -- | A hand of cards
-type Hand
-    = [Card]
+type Hand = [Card]
 
 -- should do equivalent of this for hand values
 -- [[2], [1, 10]]
 testV :: [[Int]]
 testV = do
-    x <- [2]
-    y <- [1, 10]
-    return $ [x] <> [y]
+  x <- [2]
+  y <- [1, 10]
+  return $ [x] <> [y]
 
 -- | Given a list of combinations (list), return a list of all the
 -- possible variations of those combinations.
@@ -111,11 +109,11 @@ sumHand h =
       possible = combinations values
   in fmap sum possible
 
-
 -- | Take a list of hands, and return a tuple of the winning
 -- sum, the combinations possible for the hand and the hand
 -- itself.
-pickWinner :: [Hand] -> (Int, [Int], Hand)
+pickWinner :: [Hand]             -- ^ Hands to choose winner from
+           -> (Int, [Int], Hand) -- ^ Return triple of winning number, card values and hand
 pickWinner hands =
   let values = fmap (\x -> (sumHand x, x)) hands
       noBust = fmap (\(n, x) -> (filter (<= 21) n, x)) values
