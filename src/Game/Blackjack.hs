@@ -21,9 +21,9 @@ data Color = Red
 
 -- | The color of a Suit
 color :: Suit -> Color
-color Spades = Black
-color Clubs = Black
-color Hearts = Red
+color Spades   = Black
+color Clubs    = Black
+color Hearts   = Red
 color Diamonds = Red
 
 -- | A card's rank
@@ -44,11 +44,11 @@ data Rank = Two
 
 -- | The numeric value for the card
 value :: Rank -> [Int]
-value Jack = [10]
+value Jack  = [10]
 value Queen = [10]
-value King = [10]
-value Ace = [1, 10]
-value x = [fromEnum x + 2]
+value King  = [10]
+value Ace   = [1, 10]
+value x     = [fromEnum x + 2]
 
 -- | A card
 data Card = Card Rank Suit
@@ -104,6 +104,7 @@ combinations values = forM values (>>= return)
 
 -- | Take a hand and sum the possible combinations
 sumHand :: Hand -> [Int]
+sumHand [] = []
 sumHand h =
   let values = fmap (\(Card rank _) -> value rank) h
       possible = combinations values
@@ -112,11 +113,13 @@ sumHand h =
 -- | Take a list of hands, and return a tuple of the winning
 -- sum, the combinations possible for the hand and the hand
 -- itself.
-pickWinner :: [Hand]             -- ^ Hands to choose winner from
-           -> (Int, [Int], Hand) -- ^ Return triple of winning number, card values and hand
+pickWinner :: [Hand]                   -- ^ Hands to choose winner from
+           -> Maybe (Int, [Int], Hand) -- ^ Return triple of winning number, card values and hand
 pickWinner hands =
   let values = fmap (\x -> (sumHand x, x)) hands
       noBust = fmap (\(n, x) -> (filter (<= 21) n, x)) values
       tmax (ah, a) (bh, b) = compare (sum ah) (sum bh)
       (combo, hand) = maximumBy tmax noBust
-  in (maximum combo, combo, hand)
+  in if null noBust
+        then Nothing
+        else Just (maximum combo, combo, hand)
