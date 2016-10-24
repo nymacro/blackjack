@@ -47,7 +47,7 @@ value :: Rank -> [Int]
 value Jack  = [10]
 value Queen = [10]
 value King  = [10]
-value Ace   = [1, 10]
+value Ace   = [1, 11]
 value x     = [fromEnum x + 2]
 
 -- | A card
@@ -63,9 +63,9 @@ defaultDeck = deck
   where
     ranks = [Two, Three, Four, Five, Six, Seven, Eight, Nine, Ten, Jack, Queen, King, Ace]
     suits = [Spades, Diamonds, Clubs, Hearts]
-    deck = [ Card rank suit
-           | rank <- ranks
-           , suit <- suits ]
+    deck  = [ Card rank suit
+            | rank <- ranks
+            , suit <- suits ]
 
 -- | Shuffle deck of cards
 shuffleDeck :: Deck -> IO Deck
@@ -78,11 +78,15 @@ shuffle :: [a]    -- ^ Results accumulator
         -> IO [a] -- ^ Shuffled list result
 shuffle s [] = return s
 shuffle shuffled deck = do
-  let l = length deck
-  ix <- getStdRandom $ randomR (1, l)
+  ix <- getStdRandom $ randomR (1, length deck)
   let (front, back') = splitAt (ix - 1) deck
       (card:_, back) = splitAt 1 back'
   shuffle (card : shuffled) (front <> back)
+
+-- | Take a card from the top of the deck
+tap :: Deck -> Maybe (Card, Hand)
+tap []     = Nothing
+tap (x:xs) = Just (x, xs)
 
 -- | A hand of cards
 type Hand = [Card]
@@ -100,13 +104,15 @@ testV = do
 --
 -- E.g. Given [[2], [1, 10]], will return [[2, 1], [2, 10]]
 combinations :: [[a]] -> [[a]]
+combinations []     = []
 combinations values = forM values (>>= return)
 
 -- | Take a hand and sum the possible combinations
-sumHand :: Hand -> [Int]
+sumHand :: Hand  -- ^ Hand
+        -> [Int] -- ^ Sum of possible combinations
 sumHand [] = []
 sumHand h =
-  let values = fmap (\(Card rank _) -> value rank) h
+  let values   = fmap (\(Card rank _) -> value rank) h
       possible = combinations values
   in fmap sum possible
 
@@ -121,5 +127,15 @@ pickWinner hands =
       tmax (ah, a) (bh, b) = compare (sum ah) (sum bh)
       (combo, hand) = maximumBy tmax noBust
   in if null noBust
-        then Nothing
-        else Just (maximum combo, combo, hand)
+       then Nothing
+       else Just (maximum combo, combo, hand)
+
+game :: IO ()
+game = do
+  num  <- (read <$> getLine) :: IO Int
+  deck <- shuffleDeck defaultDeck
+  print num
+  print deck
+  let players = replicate num []
+  putStrLn "wooop"
+
