@@ -84,7 +84,7 @@ shuffle shuffled deck = do
   shuffle (card : shuffled) (front <> back)
 
 -- | Take a card from the top of the deck
-tap :: Deck -> Maybe (Card, Hand)
+tap :: Deck -> Maybe (Card, Deck)
 tap []     = Nothing
 tap (x:xs) = Just (x, xs)
 
@@ -116,26 +116,22 @@ sumHand h =
       possible = combinations values
   in fmap sum possible
 
+-- | Whether a hand is bust or not
+bust :: Hand -> Bool
+bust []   = False
+bust hand = all (> 21) (sumHand hand)
+
 -- | Take a list of hands, and return a tuple of the winning
 -- sum, the combinations possible for the hand and the hand
 -- itself.
 pickWinner :: [Hand]                   -- ^ Hands to choose winner from
            -> Maybe (Int, [Int], Hand) -- ^ Return triple of winning number, card values and hand
 pickWinner hands =
-  let values = fmap (\x -> (sumHand x, x)) hands
-      noBust = fmap (\(n, x) -> (filter (<= 21) n, x)) values
+  let values  = fmap (\x -> (sumHand x, x)) hands
+      noBust' = fmap (\(n, x) -> (filter (<= 21) n, x)) values
+      noBust  = filter (not . null . fst) noBust'
       tmax (ah, a) (bh, b) = compare (sum ah) (sum bh)
       (combo, hand) = maximumBy tmax noBust
   in if null noBust
        then Nothing
        else Just (maximum combo, combo, hand)
-
-game :: IO ()
-game = do
-  num  <- (read <$> getLine) :: IO Int
-  deck <- shuffleDeck defaultDeck
-  print num
-  print deck
-  let players = replicate num []
-  putStrLn "wooop"
-

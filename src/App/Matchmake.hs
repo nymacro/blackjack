@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module App.Matchmake (wsMatchmake) where
+module App.Matchmake (wsMatchmake, disconnectGame) where
 
 import           Data.ByteString               (ByteString)
 import           Data.Monoid
@@ -81,6 +81,6 @@ wsMatchmake _ world numPlayers runGame = do
       (_, m) <- waitThread (runGame (bcast, oc) g)
       readMVar m
 
+      disconnectGame g world
       mapM_ (\(t, m) -> throwTo t ThreadKilled >> readMVar m) readts
 
-      disconnectGame g world

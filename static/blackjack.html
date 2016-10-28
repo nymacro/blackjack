@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>WebSocketeer</title>
+    <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous" />
+    <style type="text/css">
+      .emoji {
+        width: 1.5em;
+        height: 1.5em;
+        display: inline-block;
+        margin-bottom: -0.25em;
+      }
+    </style>
+    <script type="text/javascript" src="emojify.min.js"></script>
+  </head>
+  <body>
+    <div class="container">
+      <h1>WebSocket Matcheriser</h1>
+      <div class="alert alert-info" id="messages">Not connected</div>
+
+      <form onsubmit="return false;">
+        <div class="input-group">
+          <input class="form-control" type="text" id="inputName" placeholder="Your Name" />
+          <span class="input-group-btn">
+            <input class="btn" type="button" id="connectButton" value="Connect" />
+          </span>
+        </div>
+      </form>
+
+      <p/>
+
+      <form onsubmit="return false;">
+        <div class="btn-group btn-group-lg">
+          <input class="btn btn-primary" type="submit" id="tapButton" value="Tap" />
+          <input class="btn btn-danger" type="submit" id="sitButton" value="Sit" />
+        </div>
+      </form>
+
+      <h2>Hand</h2>
+      <div class="well well-sm" style="margin-bottom:0px;">
+        <div id="cards"></div>
+      </div>
+
+      <h2>Messages</h2>
+      <div class="well well-sm" style="margin-bottom:0px;">
+        <div id="output"></div>
+      </div>
+
+    </div>
+    <script type="text/javascript" src="blackjack.js"></script>
+  </body>
+</html>

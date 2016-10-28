@@ -2,6 +2,8 @@
 module App.Blackjack (runGame) where
 
 import           Data.ByteString               (ByteString)
+import           Data.ByteString.Char8         (pack)
+import           Data.List                     (find)
 import           Data.Monoid
 
 import           Control.Concurrent            (forkIO, threadDelay)
@@ -13,6 +15,7 @@ import           Control.Monad
 import           Network.WebSockets
 
 import           App.Common
+import           App.Matchmake                 (disconnectGame)
 
 import           Game.Blackjack
 
@@ -38,15 +41,48 @@ runGame (ic, oc) game = do
   bj <- newTVarIO $ BlackjackGame players deck
 
   -- main thread
-  let loop = do
+  let apply u f bu = if bjUser bu == u
+                       then f bu
+                       else bu
+      findUser g u = do
+        find (\x -> u == bjUser x) <$> (bjUsers <$> readTVarIO g)
+      loop = do
+        (user@(User name conn), d) <- readChan oc
+        _ <- case d of
+          "sit" -> atomically $ do
+            modifyTVar bj $ \b@(BlackjackGame users _) ->
+                              let sit = apply user (\x -> x { sitting = True })
+                              in b { bjUsers = fmap sit users }
+          "tap" -> do
+            mu <- findUser bj user
+            case mu of
+              Nothing -> return ()
+              Just (BlackjackUser _ _ hand) -> do
+                if bust hand
+                  then sendTextData conn ("you busted" :: ByteString)
+                  else do
+                    card <- atomically $ do
+                      (BlackjackGame users deck) <- readTVar bj
+                      let Just (c, deck') = tap deck
+                          giveCard = apply user (\x -> x { bjCards = c : bjCards x })
+                      writeTVar bj (BlackjackGame (fmap giveCard users) deck')
+                      return c
+                    sendTextData conn (pack $ show card)
+          _ -> return ()
+
+        -- check whether all users are sitting
         finished <- atomically $ do
           (BlackjackGame users _) <- readTVar bj
-          return $ any (not . sitting) users
+          return $ all sitting users
+
+        -- pick a winner if everyone is sitting
         let final = do
               users <- bjUsers <$> readTVarIO bj
-              let hands = fmap bjCards users
+              let hands  = fmap bjCards users
                   winner = pickWinner hands
-              putStrLn $ "WINNER: " <> show winner
+
+              -- broadcast winner
+              sendTo (const True) (gameUsers game) ("WINNER: " <> pack (show winner))
               return ()
         if not finished
           then loop
