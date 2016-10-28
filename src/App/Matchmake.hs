@@ -1,19 +1,29 @@
 {-# LANGUAGE OverloadedStrings #-}
 module App.Matchmake (wsMatchmake) where
 
-import           Data.ByteString (ByteString)
+import           Data.ByteString               (ByteString)
+import           Data.Monoid
 
-import           Control.Concurrent (threadDelay)
+import           Control.Concurrent            (ThreadId, forkFinally, forkIO,
+                                                threadDelay, throwTo)
+import           Control.Concurrent.Chan.Unagi
+import           Control.Concurrent.MVar
 import           Control.Concurrent.STM
-import           Control.Exception (finally)
+import           Control.Exception             (finally)
+import           Control.Exception.Base        (AsyncException (ThreadKilled))
 import           Control.Monad
 
 import           Network.WebSockets
 
 import           App.Common
 
-import           Game.Blackjack
+-- | Add game to world
+addGame :: Game -> TVar World -> IO ()
+addGame g world = do
+  atomically $
+    modifyTVar world (\w@(World _ games) -> w { worldGames = g : games })
 
+-- | Disconnect game
 disconnectGame :: Game -> TVar World -> IO ()
 disconnectGame game world = do
   forM_ (gameUsers game) disconnectUser
@@ -22,11 +32,10 @@ disconnectGame game world = do
   where
     removeGame w = w { worldGames = filter (/= game) (worldGames w) }
 
-findMatch :: TVar World -> STM (Maybe Game)
-findMatch world = do
+findMatch :: Int -> TVar World -> STM (Maybe Game)
+findMatch numPlayers world = do
   w <- readTVar world
-  let split = splitAtMaybe matchPlayers (worldLobby w)
-      matchPlayers = 2
+  let split = splitAtMaybe numPlayers (worldLobby w)
   case split of
     Nothing -> return Nothing
     Just (players, rest) -> do
@@ -34,33 +43,44 @@ findMatch world = do
       writeTVar world w { worldLobby = rest }
       return $ Just game
 
-runGame :: Game -> TVar World -> IO ()
-runGame game world = do
-  putStrLn "Running Game"
-  print game
-
-  -- add game to world state
-  atomically $
-    modifyTVar world (\w@(World _ games) -> w { worldGames = game : games })
-
-  -- run the game
-  forever $ do
-    forM_ (gameUsers game) $
-      \(User _ conn) -> do
-        sendTextData conn ("> YOUR TURN" :: ByteString)
-        msg <- receiveData conn
-        sendTo (const True) (gameUsers game) msg
+waitThread :: IO () -> IO (ThreadId, MVar ())
+waitThread io = do
+  mvar <- newEmptyMVar
+  t <- forkFinally io (\_ -> putMVar mvar ())
+  return (t, mvar)
 
 -- matchmaking websockets app
-wsMatchmake :: User -> TVar World -> IO ()
-wsMatchmake _ world = do
+wsMatchmake :: User                        -- ^ Joining user
+            -> TVar World                  -- ^ World state
+            -> Int                         -- ^ Player count
+            -> ((InChan (User, ByteString), OutChan (User, ByteString)) -> Game -> IO ()) -- ^ Game loop
+            -> IO ()
+wsMatchmake _ world numPlayers runGame = do
   -- find match
-  game <- atomically $ findMatch world
+  game <- atomically $ findMatch numPlayers world
   print game
 
   -- run game or idle
   case game of
     Nothing -> do
       putStrLn "Waiting"
-      forever $ threadDelay 1000 -- wait forever (or till disconnect)
-    Just g -> finally (runGame g world) (disconnectGame g world)
+      forever $ threadDelay 10000
+    Just g -> do
+      addGame g world
+
+      (bcast, oc) <- newChan
+
+      -- create read channel for users
+      readts <- forM (gameUsers g) $ \user@(User name conn) -> do
+        waitThread $ do
+          forever $ do
+            d <- receiveData conn
+            writeChan bcast (user, d)
+
+      -- launch main game thread
+      (_, m) <- waitThread (runGame (bcast, oc) g)
+      readMVar m
+
+      mapM_ (\(t, m) -> throwTo t ThreadKilled >> readMVar m) readts
+
+      disconnectGame g world

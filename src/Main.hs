@@ -24,7 +24,10 @@ import           App.Chat
 import           App.Common
 import           App.Matchmake
 
-restApp :: TVar World -> IO Application
+import qualified App.Blackjack                        as Blackjack
+import qualified App.Turnbased                        as Turnbased
+
+restApp ::  TVar World -> IO Application
 restApp world = scottyApp $ do
   middleware logStdout
   middleware $ staticPolicy $ addBase "static"
@@ -36,7 +39,7 @@ restApp world = scottyApp $ do
 wsApp :: TVar World -> ServerApp
 wsApp world pending = do
   let request = pendingRequest pending
-      path = requestPath request
+      path    = requestPath request
   print request
   print path
 
@@ -52,13 +55,16 @@ wsApp world pending = do
   -- add user to lobby
   atomically $
     modifyTVar world (\w@(World lobby _) -> w { worldLobby = user : lobby })
+
   case path of
-    "/chat"  -> wsChat user world
-    "/match" -> wsMatchmake user world
-    _        -> return ()
+    "/chat"      -> wsChat user world
+    "/groupchat" -> wsMatchmake user world 2 wsGroupChat
+    "/match"     -> wsMatchmake user world 2 Turnbased.runGame
+    "/blackjack" -> wsMatchmake user world 2 Blackjack.runGame
+    _            -> return ()
 
 main :: IO ()
 main = do
   world <- newTVarIO defaultWorld
-  rest <- restApp world
+  rest  <- restApp world
   run 3000 $ websocketsOr defaultConnectionOptions (wsApp world) rest

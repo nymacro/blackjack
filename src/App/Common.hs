@@ -18,6 +18,9 @@ data User =
 instance Eq User where
   (User a _) == (User b _) = a == b
 
+noUser :: User
+noUser = User undefined undefined
+
 instance Show User where
   show (User a _) = show a
 
