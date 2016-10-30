@@ -44,30 +44,35 @@ runGame (ic, oc) game = do
   let apply u f bu = if bjUser bu == u
                        then f bu
                        else bu
+      modUser b@(BlackjackGame users _) u f =
+        b { bjUsers = fmap (apply u f) users }
+      -- atomically find user
       findUser g u = do
         find (\x -> u == bjUser x) <$> (bjUsers <$> readTVarIO g)
+      -- sit a user in a game
+      sitUser g u = modUser g u (\x -> x { sitting = True })
+      -- atomically sit user
+      sitUserSTM g u = modifyTVar g $ \g' -> sitUser g' u
       loop = do
         (user@(User name conn), d) <- readChan oc
         _ <- case d of
-          "sit" -> atomically $ do
-            modifyTVar bj $ \b@(BlackjackGame users _) ->
-                              let sit = apply user (\x -> x { sitting = True })
-                              in b { bjUsers = fmap sit users }
+          "sit" -> atomically $ sitUserSTM bj user
           "tap" -> do
             mu <- findUser bj user
             case mu of
               Nothing -> return ()
+              Just (BlackjackUser _ True _) -> return ()
               Just (BlackjackUser _ _ hand) -> do
-                if bust hand
-                  then sendTextData conn ("you busted" :: ByteString)
-                  else do
-                    card <- atomically $ do
-                      (BlackjackGame users deck) <- readTVar bj
-                      let Just (c, deck') = tap deck
-                          giveCard = apply user (\x -> x { bjCards = c : bjCards x })
-                      writeTVar bj (BlackjackGame (fmap giveCard users) deck')
-                      return c
-                    sendTextData conn (pack $ show card)
+                card <- atomically $ do
+                  (BlackjackGame users deck) <- readTVar bj
+                  let Just (c, deck') = tap deck
+                      giveCard = apply user (\x -> x { bjCards = c : bjCards x })
+                  writeTVar bj (BlackjackGame (fmap giveCard users) deck')
+                  -- bust 'em
+                  when (bust (c : hand)) $ sitUserSTM bj user
+                  return c
+                -- tell user what card they got
+                sendTextData conn (pack $ show card)
           _ -> return ()
 
         -- check whether all users are sitting
@@ -84,6 +89,7 @@ runGame (ic, oc) game = do
               -- broadcast winner
               sendTo (const True) (gameUsers game) ("WINNER: " <> pack (show winner))
               return ()
+
         if not finished
           then loop
           else final

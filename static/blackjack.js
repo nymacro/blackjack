@@ -20,11 +20,11 @@ function cardImageUrl(card) {
                   "Seven" : "7",
                   "Eight" : "8",
                   "Nine"  : "9",
-                  "Ten"   : "10",
+                  "Ten"   : "0",
                   "Jack"  : "J",
                   "Queen" : "Q",
                   "King"  : "K",
-                  "Ace"   : "A" };
+                  "Ace"   : "ace" };
     var suit  = { "Diamonds" : "D",
                   "Clubs"    : "C",
                   "Hearts"   : "H",
