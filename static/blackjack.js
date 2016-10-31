@@ -7,7 +7,7 @@ var hand     = document.getElementById("cards");
 
 var nameInput = document.getElementById("inputName");
 var connectButton = document.getElementById("connectButton");
-connectButton.onclick = function() { connect(); };
+connectButton.onclick = function() { connect(); clearCards(); };
 
 function cardImageUrl(card) {
     var pat   = /Card (.*) (.*)/i;
@@ -53,6 +53,12 @@ sit.onclick = function() { sendText("sit"); };
 
 // input.disabled = true;
 // button.disabled = true;
+
+function clearCards() {
+    while (hand.firstChild) {
+        hand.removeChild(hand.firstChild);
+    }
+}
 
 function updateConnected() {
     nameInput.disabled = true;
