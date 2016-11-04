@@ -5,6 +5,7 @@ import           Data.ByteString               (ByteString)
 import           Data.ByteString.Char8         (pack)
 import           Data.List                     (find)
 import           Data.Monoid
+import           Data.Text.Encoding            (encodeUtf8)
 
 import           Control.Concurrent            (forkIO, threadDelay)
 import           Control.Concurrent.Chan.Unagi
@@ -71,8 +72,15 @@ runGame (ic, oc) game = do
                   -- bust 'em
                   when (bust (c : hand)) $ sitUserSTM bj user
                   return c
+                let cardText = (pack $ show card)
                 -- tell user what card they got
-                sendTextData conn (pack $ show card)
+                sendTextData conn $ "YOU " <> cardText
+                -- tell the other users what they got
+                users <- bjUsers <$> readTVarIO bj
+                forM_ users $ \(BlackjackUser u@(User n c) _ _) ->
+                  if u /= user
+                    then sendTextData c $ encodeUtf8 n <> " " <> cardText
+                    else return ()
           _ -> return ()
 
         -- check whether all users are sitting

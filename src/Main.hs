@@ -27,6 +27,7 @@ import           App.Matchmake
 import qualified App.Blackjack                        as Blackjack
 import qualified App.Turnbased                        as Turnbased
 
+-- handle HTTP requests
 restApp ::  TVar World -> IO Application
 restApp world = scottyApp $ do
   middleware logStdout
@@ -36,6 +37,7 @@ restApp world = scottyApp $ do
     state <- liftIO $ readTVarIO world
     text $ LazyText.pack $ show state
 
+-- handle websocket connections
 wsApp :: TVar World -> ServerApp
 wsApp world pending = do
   let request = pendingRequest pending
