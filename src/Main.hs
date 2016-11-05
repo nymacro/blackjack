@@ -1,10 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
+import           Data.Aeson                           (decode)
 import           Data.ByteString                      (ByteString)
 import           Data.Monoid
 import           Data.Text
 import qualified Data.Text.Lazy                       as LazyText
+
 
 import           Control.Concurrent.STM
 import           Control.Monad
@@ -22,6 +24,7 @@ import           Web.Scotty
 
 import           App.Chat
 import           App.Common
+import           App.Config
 import           App.Matchmake
 
 import qualified App.Blackjack                        as Blackjack
@@ -46,24 +49,31 @@ wsApp world pending = do
   print path
 
   conn <- acceptRequest pending
-  name <- receiveData conn
 
-  let user = User name conn
-  liftIO $ putStrLn $ show user <> " connected"
+  -- receive login config
+  json <- receiveData conn
 
-  -- keep connection alive
-  forkPingThread conn 10
+  case (decode json :: Maybe LoginConfig) of
+    Nothing -> do
+      putStrLn $ show json
+      return ()
+    Just (LoginConfig name opts) -> do
+      let user = User name conn
+      putStrLn $ show user <> " connected"
 
-  -- add user to lobby
-  atomically $
-    modifyTVar world (\w@(World lobby _) -> w { worldLobby = user : lobby })
+      -- keep connection alive
+      forkPingThread conn 10
 
-  case path of
-    "/chat"      -> wsChat user world
-    "/groupchat" -> wsMatchmake user world 2 wsGroupChat
-    "/match"     -> wsMatchmake user world 2 Turnbased.runGame
-    "/blackjack" -> wsMatchmake user world 2 Blackjack.runGame
-    _            -> return ()
+      -- add user to lobby
+      atomically $
+        modifyTVar world (\w@(World lobby _) -> w { worldLobby = user : lobby })
+
+      case path of
+        "/chat"      -> wsChat user world
+        "/groupchat" -> wsMatchmake user world 2 wsGroupChat
+        "/match"     -> wsMatchmake user world 2 Turnbased.runGame
+        "/blackjack" -> wsMatchmake user world 3 Blackjack.runGame
+        _            -> return ()
 
 main :: IO ()
 main = do

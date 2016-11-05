@@ -38,6 +38,8 @@ executable mmaker
                      , stm
                      , unagi-chan
                      , random
+                     , aeson
+                     , containers
 
 test-suite test
   type:                exitcode-stdio-1.0

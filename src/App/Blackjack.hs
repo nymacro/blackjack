@@ -41,7 +41,9 @@ runGame (ic, oc) game = do
   let players = fmap toBlackjackUser (gameUsers game)
   bj <- newTVarIO $ BlackjackGame players deck
 
-  -- main thread
+  -- deal all players 2 cards
+  -- TODO
+
   let apply u f bu = if bjUser bu == u
                        then f bu
                        else bu
@@ -54,6 +56,7 @@ runGame (ic, oc) game = do
       sitUser g u = modUser g u (\x -> x { sitting = True })
       -- atomically sit user
       sitUserSTM g u = modifyTVar g $ \g' -> sitUser g' u
+      -- main game loop
       loop = do
         (user@(User name conn), d) <- readChan oc
         _ <- case d of
@@ -79,7 +82,7 @@ runGame (ic, oc) game = do
                 users <- bjUsers <$> readTVarIO bj
                 forM_ users $ \(BlackjackUser u@(User n c) _ _) ->
                   if u /= user
-                    then sendTextData c $ encodeUtf8 n <> " " <> cardText
+                    then sendTextData c $ encodeUtf8 name <> " " <> cardText
                     else return ()
           _ -> return ()
 
