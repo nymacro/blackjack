@@ -1,10 +1,12 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 module App.Common where
 
 import           Data.ByteString    (ByteString)
 import           Data.Monoid
 import           Data.Text          (Text)
 
+import           Control.Exception  (catch)
 import           Control.Monad      (forM_)
 
 import           Network.WebSockets
@@ -49,7 +51,12 @@ defaultWorld = World [] []
 sendTo :: (User -> Bool) -> [User] -> ByteString -> IO ()
 sendTo f users msg = do
   let sendUsers = filter f users
-  forM_ sendUsers $ \(User _ conn) -> sendTextData conn msg
+  forM_ sendUsers $ \(User _ conn) -> safeSend conn msg
+
+-- | Try to send data to websocket connection, handling ConnectionClosed
+--   exception and ignoring it.
+safeSend :: WebSocketsData a => Connection -> a -> IO ()
+safeSend conn msg = sendTextData conn msg `catch` (\ConnectionClosed -> return ())
 
 -- | Disconnect user
 disconnectUser :: User -> IO ()

@@ -10,6 +10,13 @@ var nameInput = document.getElementById("inputName");
 var connectButton = document.getElementById("connectButton");
 connectButton.onclick = function() { connect(); clearGame(); };
 
+var output = document.getElementById("output");
+
+var tap    = document.getElementById("tapButton");
+var sit    = document.getElementById("sitButton");
+tap.onclick = function() { sendText("tap"); };
+sit.onclick = function() { sendText("sit"); };
+
 function cardImageUrl(card) {
     var pat   = /Card (.*) (.*)/i;
     var match = pat.exec(card);
@@ -35,13 +42,6 @@ function cardImageUrl(card) {
     var baseUrl = "/img/";
     return baseUrl + name + ".png";
 }
-
-var output = document.getElementById("output");
-
-var tap    = document.getElementById("tapButton");
-var sit    = document.getElementById("sitButton");
-tap.onclick = function() { sendText("tap"); };
-sit.onclick = function() { sendText("sit"); };
 
 function clearGame() {
     while (hand.firstChild) {
@@ -77,7 +77,7 @@ function connect() {
 
 function config() {
     return { "name": nameInput.value,
-             "opts": {} };
+             "opts": { "players" : 1 } };
 }
 
 function writeToScreen(message) {

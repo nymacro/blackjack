@@ -9,7 +9,7 @@ import           Control.Concurrent            (ThreadId, forkFinally, forkIO,
 import           Control.Concurrent.Chan.Unagi
 import           Control.Concurrent.MVar
 import           Control.Concurrent.STM
-import           Control.Exception             (finally)
+import           Control.Exception             (catch, finally, handle)
 import           Control.Exception.Base        (AsyncException (ThreadKilled))
 import           Control.Monad
 
@@ -58,24 +58,26 @@ wsMatchmake :: User                        -- ^ Joining user
 wsMatchmake _ world numPlayers runGame = do
   -- find match
   game <- atomically $ findMatch numPlayers world
-  print game
 
   -- run game or idle
   case game of
     Nothing -> do
-      putStrLn "Waiting"
+      putStrLn "Waiting to find game..."
       forever $ threadDelay 10000
     Just g -> do
       addGame g world
 
       (bcast, oc) <- newChan
 
-      -- create read channel for users
-      readts <- forM (gameUsers g) $ \user@(User name conn) -> do
+      -- create read thread for users
+      readts <- forM (gameUsers g) $ \user@(User _ conn) -> do
         waitThread $ do
-          forever $ do
-            d <- receiveData conn
-            writeChan bcast (user, d)
+          -- make sure we tell the game when a user disconnects
+          let fin = writeChan bcast (user, "DISCONNECT") >> putStrLn "Client disconnected"
+          flip finally fin $
+            forever $ do
+              d <- receiveData conn
+              writeChan bcast (user, d)
 
       -- launch main game thread
       (_, m) <- waitThread (runGame (bcast, oc) g)

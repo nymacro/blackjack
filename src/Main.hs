@@ -3,10 +3,10 @@ module Main where
 
 import           Data.Aeson                           (decode)
 import           Data.ByteString                      (ByteString)
+import qualified Data.Map                             as Map
 import           Data.Monoid
 import           Data.Text
 import qualified Data.Text.Lazy                       as LazyText
-
 
 import           Control.Concurrent.STM
 import           Control.Monad
@@ -61,12 +61,17 @@ wsApp world pending = do
       let user = User name conn
       putStrLn $ show user <> " connected"
 
+      putStrLn $ show opts
+
       -- keep connection alive
       forkPingThread conn 10
 
       -- add user to lobby
       atomically $
         modifyTVar world (\w@(World lobby _) -> w { worldLobby = user : lobby })
+
+      -- see if options have players
+      let numPlayers = Map.lookup "players" <$> opts
 
       case path of
         "/chat"      -> wsChat user world
