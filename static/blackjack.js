@@ -99,7 +99,9 @@ function addCard(card) {
             if (!toHand) {
                 toHand = document.createElement("div");
                 toHand.id = "player_" + name;
-                var nameHeader = document.createElement("h3");
+                var nameHeader = document.createElement("div");
+                nameHeader.className = "label label-default";
+                nameHeader.style = "font-size: 200%";
                 nameHeader.appendChild(document.createTextNode(name));
                 toHand.appendChild(nameHeader);
                 others.appendChild(toHand);

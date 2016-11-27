@@ -61,7 +61,7 @@ safeSend conn msg = sendTextData conn msg `catch` (\ConnectionClosed -> return (
 -- | Disconnect user
 disconnectUser :: User -> IO ()
 disconnectUser (User name conn) = do
-  putStrLn $ show name <> " disconnected"
+  putStrLn $ "Disconnected " <> show name
   sendClose conn ("BYE" :: ByteString)
 
 -- | splitAt which returns a Maybe

@@ -106,8 +106,6 @@ runGame (_, oc) game = do
 
         -- check whether all users are sitting
         finished <- all sitting <$> bjUsers <$> readTVarIO bj
-        -- print =<< bjUsers <$> readTVarIO bj
-        -- print finished
 
         -- pick a winner if everyone is sitting
         let final = do

@@ -73,7 +73,7 @@ wsMatchmake _ world numPlayers runGame = do
       readts <- forM (gameUsers g) $ \user@(User _ conn) -> do
         waitThread $ do
           -- make sure we tell the game when a user disconnects
-          let fin = writeChan bcast (user, "DISCONNECT") >> putStrLn "Client disconnected"
+          let fin = putStrLn ("Client left " <> show user) >> writeChan bcast (user, "DISCONNECT")
           flip finally fin $
             forever $ do
               d <- receiveData conn
