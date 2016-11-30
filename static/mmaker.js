@@ -30,7 +30,7 @@ function connectEnabled(b) {
 connectEnabled(true);
 
 function connectSocket() {
-    socket = new WebSocket('ws://localhost:3000/');
+    socket = new WebSocket('ws://' + document.location.host + '/');
 
     socket.onopen = function (event) {
         addContent("Connected");

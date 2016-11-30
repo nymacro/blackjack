@@ -112,8 +112,7 @@ runGame (_, oc) game = do
               putStrLn "Game finished"
               users <- bjUsers <$> readTVarIO bj
               print users
-              let hands  = fmap bjCards users
-                  winner = pickWinner hands
+              let winner = pickWinner_ bjCards users
 
               putStrLn $ "Winner" <> show winner
 

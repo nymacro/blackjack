@@ -124,10 +124,17 @@ bust hand = all (> 21) (sumHand hand)
 -- | Take a list of hands, and return a tuple of the winning
 -- sum, the combinations possible for the hand and the hand
 -- itself.
+--
+-- TODO add possibility for tie
 pickWinner :: [Hand]                   -- ^ Hands to choose winner from
            -> Maybe (Int, [Int], Hand) -- ^ Return triple of winning number, card values and hand
-pickWinner hands =
-  let values  = fmap (\x -> (sumHand x, x)) hands
+pickWinner = pickWinner_ id
+
+pickWinner_ :: (a -> Hand)
+            -> [a]
+            -> Maybe (Int, [Int], a)
+pickWinner_ f hands =
+  let values  = fmap (\x -> (sumHand (f x), x)) hands
       noBust' = fmap (\(n, x) -> (filter (<= 21) n, x)) values
       noBust  = filter (not . null . fst) noBust'
       tmax (ah, a) (bh, b) = compare (sum ah) (sum bh)

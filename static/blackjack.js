@@ -2,15 +2,17 @@ var wsUri = "ws://" + document.location.host + "/blackjack";
 
 var websocket;
 
-var messages = document.getElementById("messages");
+var alerts   = document.getElementById("alerts");
 var hand     = document.getElementById("cards");
 var others   = document.getElementById("others");
 
 var nameInput = document.getElementById("inputName");
+var nameText  = document.getElementById("player-name");
 var connectButton = document.getElementById("connectButton");
 connectButton.onclick = function() { connect(); clearGame(); };
 
-var output = document.getElementById("output");
+var messages = document.getElementById("messages");
+var instruments = document.getElementById("instruments");
 
 var tap    = document.getElementById("tapButton");
 var sit    = document.getElementById("sitButton");
@@ -83,7 +85,7 @@ function config() {
 function writeToScreen(message) {
     var msg = document.createElement("div");
     msg.appendChild(document.createTextNode(message));
-    output.appendChild(msg);
+    messages.appendChild(msg);
 }
 
 function addCard(card) {
@@ -110,30 +112,41 @@ function addCard(card) {
         var img = document.createElement("img");
         img.setAttribute("src", cardImageUrl(card));
         if (name != "YOU") {
-            img.width = 96;
+            img.className = "card-small";
         } else {
-            img.width = 128;
+            img.className = "card";
         }
         toHand.appendChild(img);
     }
 }
 
 function onOpen(evt) {
-    messages.innerHTML = "Connected to " + wsUri;
+    alerts.innerHTML = "Connected to " + wsUri;
     websocket.send(JSON.stringify(config()));
+
+    instruments.style.display = 'none';
+
+    var node = document.createElement("span");
+    node.appendChild(document.createTextNode(nameInput.value));
+    nameText.appendChild(node);
 }
 
 function onClose(evt) {
-    updateDisconnected();
+    instruments.style.display = 'block';
 
-    messages.className = "alert alert-warning";
-    messages.innerHTML = "Disconnected";
+    updateDisconnected();
+    alerts.className = "alert alert-warning";
+    alerts.innerHTML = "Disconnected";
+
+    while (nameText.firstChild) {
+        nameText.removeChild(nameText.firstChild);
+    }
 }
 
 function onError(evt) {
     console.log("Error: " + evt);
-    messages.className = "alert alert-danger";
-    messages.innerHTML = "Error: " + evt.data;
+    alerts.className = "alert alert-danger";
+    alerts.innerHTML = "Error: " + evt.data;
 }
 
 function onMessage(evt) {
@@ -146,4 +159,3 @@ function sendText(json) {
     console.log("sending text: " + json);
     websocket.send(json);
 }
-
