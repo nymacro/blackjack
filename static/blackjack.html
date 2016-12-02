@@ -15,9 +15,11 @@
       .player-hand {
         background-color: #1a4a1c;
       }
+
       .input-group-btn .btn {
         color: #000;
-        background-color: #1a4a1c;
+        background-color: #3a8a3c;
+        font-weight: bold;
       }
       .card {
         margin-right: 12px;
@@ -27,6 +29,9 @@
         margin-right: 8px;
         margin-bottom: 8px;
         width: 96px;
+      }
+      #game-content {
+        display: none;
       }
       #messages {
         color: #308834;
@@ -54,25 +59,28 @@
         </form>
       </div>
 
-      <div id="player-name"></div>
+      <div id="game-content">
+        <div id="player-name"></div>
         
-      <p/>
-
-      <form onsubmit="return false;">
-        <div class="btn-group btn-group-lg">
-          <input class="btn btn-primary" type="submit" id="tapButton" value="Tap" />
-          <input class="btn btn-danger" type="submit" id="sitButton" value="Sit" />
+        <p/>
+        
+        <form onsubmit="return false;">
+          <div class="btn-group btn-group-lg">
+            <input class="btn btn-primary" type="submit" id="tapButton" value="Tap" />
+            <input class="btn btn-danger" type="submit" id="sitButton" value="Sit" />
+          </div>
+        </form>
+        
+        <h2>Hand</h2>
+        <div class="well well-sm" style="margin-bottom:0px;">
+          <div id="cards"></div>
         </div>
-      </form>
-
-      <h2>Hand</h2>
-      <div class="well well-sm" style="margin-bottom:0px;">
-        <div id="cards"></div>
-      </div>
-
-      <h2>Opponent Hands</h2>
-      <div class="well well-sm" style="margin-bottom:0px;">
-        <div id="others"></div>
+        
+        <h2>Other's Hands</h2>
+        <div class="well well-sm" style="margin-bottom:0px;">
+          <div id="others"></div>
+        </div>
+        
       </div>
 
       <h2>Messages</h2>

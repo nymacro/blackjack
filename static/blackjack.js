@@ -13,6 +13,7 @@ connectButton.onclick = function() { connect(); clearGame(); };
 
 var messages = document.getElementById("messages");
 var instruments = document.getElementById("instruments");
+var contents = document.getElementById("game-content");
 
 var tap    = document.getElementById("tapButton");
 var sit    = document.getElementById("sitButton");
@@ -125,14 +126,19 @@ function onOpen(evt) {
     websocket.send(JSON.stringify(config()));
 
     instruments.style.display = 'none';
+    contents.style.display = 'block';
 
     var node = document.createElement("span");
-    node.appendChild(document.createTextNode(nameInput.value));
+    node.appendChild(document.createTextNode("Playing as "));
+    var b = document.createElement("b");
+    b.appendChild(document.createTextNode(nameInput.value));
+    node.appendChild(b);
     nameText.appendChild(node);
 }
 
 function onClose(evt) {
     instruments.style.display = 'block';
+    contents.style.display = 'none';
 
     updateDisconnected();
     alerts.className = "alert alert-warning";
