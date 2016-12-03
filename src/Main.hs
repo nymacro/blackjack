@@ -7,6 +7,7 @@ import qualified Data.Map                             as Map
 import           Data.Monoid
 import           Data.Text
 import qualified Data.Text.Lazy                       as LazyText
+import qualified Data.UUID.V4                         as UUID
 
 import           Control.Concurrent.STM
 import           Control.Monad
@@ -22,13 +23,11 @@ import           Network.WebSockets
 
 import           Web.Scotty
 
-import           App.Chat
 import           App.Common
 import           App.Config
 import           App.Matchmake
 
 import qualified App.Blackjack                        as Blackjack
-import qualified App.Turnbased                        as Turnbased
 
 -- handle HTTP requests
 restApp ::  TVar World -> IO Application
@@ -58,7 +57,8 @@ wsApp world pending = do
       putStrLn $ show json
       return ()
     Just (LoginConfig name opts) -> do
-      let user = User name conn
+      uuid <- UUID.nextRandom
+      let user = User name uuid conn
       putStrLn $ show user <> " connected"
 
       putStrLn $ show opts
@@ -74,9 +74,6 @@ wsApp world pending = do
       let numPlayers = Map.lookup "players" <$> opts
 
       case path of
-        "/chat"      -> wsChat user world
-        "/groupchat" -> wsMatchmake user world 2 wsGroupChat
-        "/match"     -> wsMatchmake user world 2 Turnbased.runGame
         "/blackjack" -> wsMatchmake user world 3 Blackjack.runGame
         _            -> return ()
 

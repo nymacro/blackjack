@@ -5,6 +5,7 @@ module App.Common where
 import           Data.ByteString    (ByteString)
 import           Data.Monoid
 import           Data.Text          (Text)
+import           Data.UUID          (UUID)
 
 import           Control.Exception  (catch)
 import           Control.Monad      (forM_)
@@ -14,17 +15,18 @@ import           Network.WebSockets
 data User =
        User
          { userName :: Text       -- ^ User's name
+         , userUuid :: UUID       -- ^ User's UUID
          , userConn :: Connection -- ^ User's connection
          }
 
 instance Eq User where
-  (User a _) == (User b _) = a == b
+  (User a uuid _) == (User b uuid' _) = a == b && uuid == uuid'
 
 noUser :: User
-noUser = User undefined undefined
+noUser = User undefined undefined undefined
 
 instance Show User where
-  show (User a _) = show a
+  show (User a _ _) = show a
 
 data GameState = Running
                | Finished
@@ -51,7 +53,7 @@ defaultWorld = World [] []
 sendTo :: (User -> Bool) -> [User] -> ByteString -> IO ()
 sendTo f users msg = do
   let sendUsers = filter f users
-  forM_ sendUsers $ \(User _ conn) -> safeSend conn msg
+  forM_ sendUsers $ \(User _ _ conn) -> safeSend conn msg
 
 -- | Try to send data to websocket connection, handling ConnectionClosed
 --   exception and ignoring it.
@@ -60,7 +62,7 @@ safeSend conn msg = sendTextData conn msg `catch` (\ConnectionClosed -> return (
 
 -- | Disconnect user
 disconnectUser :: User -> IO ()
-disconnectUser (User name conn) = do
+disconnectUser (User name _ conn) = do
   putStrLn $ "Disconnected " <> show name
   sendClose conn ("BYE" :: ByteString)
 

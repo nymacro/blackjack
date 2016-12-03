@@ -40,6 +40,7 @@ executable mmaker
                      , random
                      , aeson
                      , containers
+                     , uuid
 
 test-suite test
   type:                exitcode-stdio-1.0

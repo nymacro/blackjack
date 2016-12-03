@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE OverloadedStrings #-}
 module App.Blackjack (runGame) where
 
@@ -5,7 +6,9 @@ import           Data.ByteString               (ByteString)
 import           Data.ByteString.Char8         (pack, unpack)
 import           Data.List                     (find)
 import           Data.Monoid
+import qualified Data.Text                     as Text
 import           Data.Text.Encoding            (encodeUtf8)
+import qualified Data.UUID                     as UUID
 
 import           Control.Concurrent.Chan.Unagi
 import           Control.Concurrent.STM
@@ -17,14 +20,41 @@ import           App.Common
 
 import           Game.Blackjack
 
+import           Data.Aeson
+import           GHC.Generics
+
 data BlackjackUser = BlackjackUser { bjUser  :: User
                                    , sitting :: Bool
                                    , bjCards :: Hand }
-                   deriving (Show)
+                   deriving (Show, Generic)
 
 data BlackjackGame = BlackjackGame { bjUsers :: [BlackjackUser]
                                    , bjDeck  :: Deck }
-                   deriving (Show)
+                   deriving (Show, Generic)
+
+
+instance ToJSON User where
+  toJSON (User  username uuid _) = object [ "name" .= String username
+                                          , "uuid" .= String (UUID.toText uuid) ]
+  toEncoding (User username uuid _) = pairs ("name" .= username <>
+                                             "uuid" .= UUID.toText uuid)
+
+instance ToJSON Rank where
+  toJSON rank = String (Text.pack $ show rank)
+
+instance ToJSON Suit where
+  toJSON suit = String (Text.pack $ show suit)
+
+instance ToJSON Card where
+  toJSON (Card rank suit) = object [ "rank" .= rank
+                                   , "suit" .= suit ]
+
+data DealMessage = DealMessage { user :: User
+                               , card :: Card }
+                 deriving (Show, Generic)
+
+instance ToJSON DealMessage where
+  toEncoding = genericToEncoding defaultOptions
 
 toBlackjackUser :: User -> BlackjackUser
 toBlackjackUser u = BlackjackUser u False []
@@ -36,7 +66,7 @@ runGame (_, oc) game = do
 
   -- set up blackjack game
   let players = toBlackjackUser <$> (gameUsers game)
-  bj <- newTVarIO =<< (return . (BlackjackGame players)) =<< shuffleDeck defaultDeck
+  bj <- newTVarIO =<< (return . (BlackjackGame players)) =<< shuffleDeck (join $ replicate 6 defaultDeck)
 
   -- shared functions
   let apply u f bu = if bjUser bu == u
@@ -66,16 +96,16 @@ runGame (_, oc) game = do
 
   -- tell users which cards they were dealt
   u' <- bjUsers <$> readTVarIO bj
-  forM_ u' $ \(BlackjackUser user@(User _ conn) _ cards) -> do
+  forM_ u' $ \(BlackjackUser user@(User _ _ conn) _ cards) -> do
     -- other's cards
-    forM_ (filter (\(BlackjackUser u _ _) -> u /= user) u') $ \(BlackjackUser (User n _) _ cards) -> do
-      forM_ cards $ \c -> safeSend conn $ encodeUtf8 n <> " " <> (pack $ show c)
+    forM_ (filter (\(BlackjackUser u _ _) -> u /= user) u') $ \(BlackjackUser other@(User n _ _) _ cards) -> do
+      forM_ cards $ \c -> safeSend conn $ encode (DealMessage other c)
     -- their cards
-    forM_ cards $ \c -> safeSend conn $ "YOU " <> (pack $ show c)
+    forM_ cards $ \c -> safeSend conn $ encode (DealMessage user c)
 
   -- main game loop
   let loop = do
-        (user@(User name conn), d) <- readChan oc
+        (user@(User name _ conn), d) <- readChan oc
         case d of
           "DISCONNECT" -> atomically $ sitUserSTM bj user
           "sit" -> atomically $ sitUserSTM bj user
@@ -84,7 +114,7 @@ runGame (_, oc) game = do
             case mu of
               Nothing -> return ()
               Just (BlackjackUser _ True _) -> return ()
-              Just (BlackjackUser _ _ hand) -> do
+              Just (BlackjackUser u _ hand) -> do
                 card <- atomically $ do
                   (BlackjackGame users deck) <- readTVar bj
                   let Just (c, deck') = tap deck
@@ -93,21 +123,20 @@ runGame (_, oc) game = do
                   -- bust 'em
                   when (bust (c : hand)) $ sitUserSTM bj user
                   return c
-                let cardText = (pack $ show card)
                 -- tell user what card they got
-                safeSend conn $ "YOU " <> cardText
+                safeSend conn $ encode (DealMessage user card)
                 -- tell the other users what they got
                 users <- bjUsers <$> readTVarIO bj
-                forM_ users $ \(BlackjackUser u@(User _ c) _ _) ->
+                forM_ users $ \(BlackjackUser u@(User _ _ c) _ _) ->
                   if u /= user
-                    then safeSend c $ encodeUtf8 name <> " " <> cardText
+                    then safeSend c $ encode (DealMessage user card)
                     else return ()
           _ -> return ()
 
         -- check whether all users are sitting
         finished <- all sitting <$> bjUsers <$> readTVarIO bj
 
-        -- pick a winner if everyone is sitting
+        -- pick a winner if everyone is sitting (or has busted)
         let final = do
               putStrLn "Game finished"
               users <- bjUsers <$> readTVarIO bj

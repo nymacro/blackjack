@@ -21,8 +21,6 @@ tap.onclick = function() { sendText("tap"); };
 sit.onclick = function() { sendText("sit"); };
 
 function cardImageUrl(card) {
-    var pat   = /Card (.*) (.*)/i;
-    var match = pat.exec(card);
     var rank  = { "Two"   : "2",
                   "Three" : "3",
                   "Four"  : "4",
@@ -40,8 +38,7 @@ function cardImageUrl(card) {
                   "Clubs"    : "C",
                   "Hearts"   : "H",
                   "Spades"   : "S" };
-    console.log(match);
-    var name = rank[match[1]] + suit[match[2]];
+    var name = rank[card.rank] + suit[card.suit];
     var baseUrl = "/img/";
     return baseUrl + name + ".png";
 }
@@ -90,35 +87,32 @@ function writeToScreen(message) {
 }
 
 function addCard(card) {
-    var match = /^(.*) Card/.exec(card);
-    if (match) {
-        var name = match[1];
-        var toHand = null;
-        if (name == "YOU") {
-            toHand = hand;
-        } else {
-            // create if it doesn't exist
-            toHand = document.getElementById("player_" + name);
-            if (!toHand) {
-                toHand = document.createElement("div");
-                toHand.id = "player_" + name;
-                var nameHeader = document.createElement("div");
-                nameHeader.className = "label label-default";
-                nameHeader.style = "font-size: 200%";
-                nameHeader.appendChild(document.createTextNode(name));
-                toHand.appendChild(nameHeader);
-                others.appendChild(toHand);
-            }
+    var name = card.user.name;
+    var toHand = null;
+    if (name == nameInput.value) {
+        toHand = hand;
+    } else {
+        // create if it doesn't exist
+        toHand = document.getElementById("player_" + name);
+        if (!toHand) {
+            toHand = document.createElement("div");
+            toHand.id = "player_" + name;
+            var nameHeader = document.createElement("div");
+            nameHeader.className = "label label-default";
+            nameHeader.style = "font-size: 200%";
+            nameHeader.appendChild(document.createTextNode(name));
+            toHand.appendChild(nameHeader);
+            others.appendChild(toHand);
         }
-        var img = document.createElement("img");
-        img.setAttribute("src", cardImageUrl(card));
-        if (name != "YOU") {
-            img.className = "card-small";
-        } else {
-            img.className = "card";
-        }
-        toHand.appendChild(img);
     }
+    var img = document.createElement("img");
+    img.setAttribute("src", cardImageUrl(card.card));
+    if (toHand != hand) {
+        img.className = "card-small";
+    } else {
+        img.className = "card";
+    }
+    toHand.appendChild(img);
 }
 
 function onOpen(evt) {
@@ -158,7 +152,7 @@ function onError(evt) {
 function onMessage(evt) {
     console.log("Receieved: " + evt.data);
     writeToScreen(evt.data);
-    addCard(evt.data);
+    addCard(JSON.parse(evt.data));
 }
 
 function sendText(json) {
