@@ -5,11 +5,12 @@ import           Data.Aeson                           (decode)
 import           Data.ByteString                      (ByteString)
 import qualified Data.Map                             as Map
 import           Data.Monoid
-import           Data.Text
+import           Data.Text                            hiding (filter)
 import qualified Data.Text.Lazy                       as LazyText
 import qualified Data.UUID.V4                         as UUID
 
 import           Control.Concurrent.STM
+import           Control.Exception                    (finally)
 import           Control.Monad
 import           Control.Monad.IO.Class               (MonadIO, liftIO)
 

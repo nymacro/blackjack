@@ -41,6 +41,7 @@ executable mmaker
                      , aeson
                      , containers
                      , uuid
+                     , async
 
 test-suite test
   type:                exitcode-stdio-1.0

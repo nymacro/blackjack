@@ -7,7 +7,8 @@ import           Data.Monoid
 import           Data.Text          (Text)
 import           Data.UUID          (UUID)
 
-import           Control.Exception  (catch)
+import           Control.Concurrent
+import           Control.Exception  (SomeException, catch, try)
 import           Control.Monad      (forM_)
 
 import           Network.WebSockets
@@ -28,16 +29,14 @@ noUser = User undefined undefined undefined
 instance Show User where
   show (User a _ _) = show a
 
-data GameState = Running
-               | Finished
-  deriving (Show, Eq)
-
 data Game =
        Game
          { gameUsers :: [User]    -- ^ User's in a game
-         , gameState :: GameState -- ^ State of game
          }
-  deriving (Show, Eq)
+  deriving (Eq)
+
+instance Show Game where
+  show = show . gameUsers
 
 data World =
        World
@@ -64,7 +63,8 @@ safeSend conn msg = sendTextData conn msg `catch` (\ConnectionClosed -> return (
 disconnectUser :: User -> IO ()
 disconnectUser (User name _ conn) = do
   putStrLn $ "Disconnected " <> show name
-  sendClose conn ("BYE" :: ByteString)
+  sendClose conn ("" :: ByteString)
+  putStrLn $ "Done disconnecting " <> show name
 
 -- | splitAt which returns a Maybe
 splitAtMaybe :: Int -> [a] -> Maybe ([a], [a])

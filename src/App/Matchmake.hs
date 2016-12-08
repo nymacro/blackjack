@@ -6,11 +6,10 @@ import           Data.Monoid
 
 import           Control.Concurrent            (ThreadId, forkFinally, forkIO,
                                                 threadDelay, throwTo)
+import           Control.Concurrent.Async
 import           Control.Concurrent.Chan.Unagi
-import           Control.Concurrent.MVar
 import           Control.Concurrent.STM
 import           Control.Exception             (catch, finally, handle)
-import           Control.Exception.Base        (AsyncException (ThreadKilled))
 import           Control.Monad
 
 import           Network.WebSockets
@@ -26,30 +25,28 @@ addGame g world = do
 -- | Disconnect game
 disconnectGame :: Game -> TVar World -> IO ()
 disconnectGame game world = do
-  forM_ (gameUsers game) disconnectUser
   atomically $ modifyTVar world removeGame
+  forM_ (gameUsers game) disconnectUser
+  putStrLn "Done disconnecting game"
 
   where
     removeGame w = w { worldGames = filter (/= game) (worldGames w) }
 
-findMatch :: Int -> TVar World -> STM (Maybe Game)
+-- | Find match
+findMatch :: Int              -- ^ Number of players required for a game
+          -> TVar World       -- ^ World state
+          -> STM (Maybe Game) -- ^ Found game
 findMatch numPlayers world = do
   w <- readTVar world
   let split = splitAtMaybe numPlayers (worldLobby w)
   case split of
     Nothing -> return Nothing
     Just (players, rest) -> do
-      let game = Game players Running
+      let game = Game players
       writeTVar world w { worldLobby = rest }
       return $ Just game
 
-waitThread :: IO () -> IO (ThreadId, MVar ())
-waitThread io = do
-  mvar <- newEmptyMVar
-  t <- forkFinally io (\_ -> putMVar mvar ())
-  return (t, mvar)
-
--- matchmaking websockets app
+-- | Generic matchmaking websockets app
 wsMatchmake :: User                        -- ^ Joining user
             -> TVar World                  -- ^ World state
             -> Int                         -- ^ Player count
@@ -57,12 +54,12 @@ wsMatchmake :: User                        -- ^ Joining user
             -> IO ()
 wsMatchmake _ world numPlayers runGame = do
   -- find match
-  game <- atomically $ findMatch numPlayers world
+  atomically $ findMatch numPlayers world
 
   -- run game or idle
   case game of
     Nothing -> do
-      putStrLn "Waiting to find game..."
+      putStrLn "Waiting for game..."
       forever $ threadDelay 10000
     Just g -> do
       addGame g world
@@ -70,19 +67,24 @@ wsMatchmake _ world numPlayers runGame = do
       (bcast, oc) <- newChan
 
       -- create read thread for users
-      readts <- forM (gameUsers g) $ \user@(User _ _ conn) -> do
-        waitThread $ do
+      readThreads <- forM (gameUsers g) $ \user@(User _ _ conn) -> do
+        async $ do
           -- make sure we tell the game when a user disconnects
-          let fin = putStrLn ("Client left " <> show user) >> writeChan bcast (user, "DISCONNECT")
+          let fin = writeChan bcast (user, "DISCONNECT") >> putStrLn ("Client left " <> show user)
           flip finally fin $
             forever $ do
               d <- receiveData conn
               writeChan bcast (user, d)
 
       -- launch main game thread
-      (_, m) <- waitThread (runGame (bcast, oc) g)
-      readMVar m
+      main <- async (runGame (bcast, oc) g)
+      wait main
 
+      putStrLn "Disconnecting game"
       disconnectGame g world
-      mapM_ (\(t, m) -> throwTo t ThreadKilled >> readMVar m) readts
+
+      putStrLn "Killing threads"
+      mapM_ cancel readThreads
+
+      putStrLn "Finished"
 
