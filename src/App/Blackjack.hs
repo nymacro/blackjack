@@ -59,8 +59,8 @@ instance ToJSON DealMessage where
 toBlackjackUser :: User -> BlackjackUser
 toBlackjackUser u = BlackjackUser u False []
 
-runGame :: (InChan (User, ByteString), OutChan (User, ByteString)) -> Game -> IO ()
-runGame (_, oc) game = do
+runGame :: Game -> IO ()
+runGame game@(Game _ bcast oc) = do
   putStrLn "Running Blackjack Game"
   print game
 

@@ -41,8 +41,8 @@ restApp world = scottyApp $ do
     text $ LazyText.pack $ show state
 
 -- handle websocket connections
-wsApp :: TVar World -> ServerApp
-wsApp world pending = do
+wsApp :: Lobby -> TVar World -> ServerApp
+wsApp lobby world pending = do
   let request = pendingRequest pending
       path    = requestPath request
   print request
@@ -75,11 +75,12 @@ wsApp world pending = do
       let numPlayers = Map.lookup "players" <$> opts
 
       case path of
-        "/blackjack" -> wsMatchmake user world 3 Blackjack.runGame
+        "/blackjack" -> wsMatchmake user lobby world 3 Blackjack.runGame
         _            -> return ()
 
 main :: IO ()
 main = do
   world <- newTVarIO defaultWorld
   rest  <- restApp world
-  run 3000 $ websocketsOr defaultConnectionOptions (wsApp world) rest
+  lobby <- newLobby
+  run 3000 $ websocketsOr defaultConnectionOptions (wsApp lobby world) rest

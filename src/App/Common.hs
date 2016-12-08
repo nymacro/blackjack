@@ -2,14 +2,16 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module App.Common where
 
-import           Data.ByteString    (ByteString)
+import           Data.ByteString               (ByteString)
 import           Data.Monoid
-import           Data.Text          (Text)
-import           Data.UUID          (UUID)
+import           Data.Text                     (Text)
+import           Data.UUID                     (UUID)
 
 import           Control.Concurrent
-import           Control.Exception  (SomeException, catch, try)
-import           Control.Monad      (forM_)
+import           Control.Concurrent.Async
+import           Control.Concurrent.Chan.Unagi
+import           Control.Exception             (SomeException, catch, try)
+import           Control.Monad                 (forM_)
 
 import           Network.WebSockets
 
@@ -31,7 +33,9 @@ instance Show User where
 
 data Game =
        Game
-         { gameUsers :: [User]    -- ^ User's in a game
+         { gameUsers   :: [User]    -- ^ User's in a game
+         , gameInChan  :: InChan (User, ByteString)
+         , gameOutChan :: OutChan (User, ByteString)
          }
   deriving (Eq)
 
@@ -47,6 +51,13 @@ data World =
 
 defaultWorld :: World
 defaultWorld = World [] []
+
+-- | Lobby state. Used for synchronising players when finding a match
+data Lobby = Lobby (MVar (Async (), Game))
+
+-- | Create new lobby state
+newLobby :: IO Lobby
+newLobby = Lobby <$> newEmptyMVar
 
 -- | Send to users who match predicate
 sendTo :: (User -> Bool) -> [User] -> ByteString -> IO ()
