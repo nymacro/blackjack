@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module App.Matchmake (wsMatchmake, disconnectGame) where
+module App.Matchmake (wsMatchmake, disconnectGame, Lobby, newLobby) where
 
 import           Data.ByteString               (ByteString)
 import           Data.Monoid
@@ -15,6 +15,31 @@ import           Network.WebSockets
 
 import           App.Common
 
+-- | Lobby state. Used for synchronising players when finding a match
+data Lobby = Lobby (TVar (MVar (Async (), Game)))
+
+-- | Create new lobby state
+newLobby :: IO Lobby
+newLobby = do
+  m <- newEmptyMVar
+  t <- newTVarIO m
+  return $ Lobby t
+
+-- | Create a new lobby game and return previously filled game sync
+swapLobby :: Lobby -> IO (MVar (Async (), Game))
+swapLobby (Lobby t) = do
+  -- create a new MVar to replace the existing one which will be used
+  -- to return/synchronise the game for waiting players
+  m' <- newEmptyMVar
+  atomically $ do
+    m <- readTVar t
+    writeTVar t m'
+    return m
+
+-- | Get the current lobby game sync
+getLobby :: Lobby -> IO (MVar (Async (), Game))
+getLobby (Lobby t) = readTVarIO t
+
 -- | Add game to world
 addGame :: Game -> TVar World -> IO ()
 addGame g world = do
@@ -29,14 +54,10 @@ disconnectGame game world = do
   where
     removeGame w = w { worldGames = filter (/= game) (worldGames w) }
 
--- | Find game
-findGame :: Int              -- ^ Number of players required for a game
-         -> Lobby            -- ^ Lobby state
-         -> TVar World       -- ^ World state
-         -> (Game -> IO ())    -- ^ Game loop
-         -> IO (MVar (Async (), Game))   -- ^ Found game
-findGame numPlayers (Lobby m) world runGame = do
-  players <- atomically $ do
+-- | Take players from world lobby
+takePlayers :: Int -> TVar World -> IO (Maybe [User])
+takePlayers numPlayers world =
+  atomically $ do
     w <- readTVar world
     let split = splitAtMaybe numPlayers (worldLobby w)
     case split of
@@ -45,12 +66,22 @@ findGame numPlayers (Lobby m) world runGame = do
         writeTVar world w { worldLobby = rest }
         return $ Just players
 
+-- | Find game
+findGame :: Int              -- ^ Number of players required for a game
+         -> Lobby            -- ^ Lobby state
+         -> TVar World       -- ^ World state
+         -> (Game -> IO ())    -- ^ Game loop
+         -> IO (MVar (Async (), Game))   -- ^ Found game
+findGame numPlayers lobby world runGame = do
+  players <- takePlayers numPlayers world
   case players of
-    Nothing -> return ()
+    Nothing -> getLobby lobby
     Just p  -> do
       -- set up game and run
       (bcast, oc) <- newChan
       let g = Game p bcast oc
+
+      m <- swapLobby lobby
 
       -- main game thread
       a <- async (runGame g)
@@ -58,13 +89,14 @@ findGame numPlayers (Lobby m) world runGame = do
 
       -- register game
       addGame g world
-  return m
+
+      return m
 
 -- | Generic matchmaking websockets app
-wsMatchmake :: User                        -- ^ Joining user
-            -> Lobby                       -- ^ Lobby state
-            -> TVar World                  -- ^ World state
-            -> Int                         -- ^ Player count
+wsMatchmake :: User          -- ^ Joining user
+            -> Lobby         -- ^ Lobby state
+            -> TVar World    -- ^ World state
+            -> Int           -- ^ Player count
             -> (Game -> IO ()) -- ^ Game loop
             -> IO ()
 wsMatchmake user@(User _ _ conn) lobby world numPlayers runGame = do
@@ -82,5 +114,9 @@ wsMatchmake user@(User _ _ conn) lobby world numPlayers runGame = do
 
   -- wait for game to finish and clean up
   wait main
+
   disconnectGame g world
   cancel a
+
+  return ()
+

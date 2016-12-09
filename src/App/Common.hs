@@ -52,13 +52,6 @@ data World =
 defaultWorld :: World
 defaultWorld = World [] []
 
--- | Lobby state. Used for synchronising players when finding a match
-data Lobby = Lobby (MVar (Async (), Game))
-
--- | Create new lobby state
-newLobby :: IO Lobby
-newLobby = Lobby <$> newEmptyMVar
-
 -- | Send to users who match predicate
 sendTo :: (User -> Bool) -> [User] -> ByteString -> IO ()
 sendTo f users msg = do

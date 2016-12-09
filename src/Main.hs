@@ -10,7 +10,6 @@ import qualified Data.Text.Lazy                       as LazyText
 import qualified Data.UUID.V4                         as UUID
 
 import           Control.Concurrent.STM
-import           Control.Exception                    (finally)
 import           Control.Monad
 import           Control.Monad.IO.Class               (MonadIO, liftIO)
 
@@ -30,7 +29,7 @@ import           App.Matchmake
 
 import qualified App.Blackjack                        as Blackjack
 
--- handle HTTP requests
+-- | HTTP handler
 restApp ::  TVar World -> IO Application
 restApp world = scottyApp $ do
   middleware logStdout
@@ -40,7 +39,7 @@ restApp world = scottyApp $ do
     state <- liftIO $ readTVarIO world
     text $ LazyText.pack $ show state
 
--- handle websocket connections
+-- | Websocket handler
 wsApp :: Lobby -> TVar World -> ServerApp
 wsApp lobby world pending = do
   let request = pendingRequest pending
@@ -51,11 +50,11 @@ wsApp lobby world pending = do
   conn <- acceptRequest pending
 
   -- receive login config
-  json <- receiveData conn
+  jsonOpts <- receiveData conn
 
-  case (decode json :: Maybe LoginConfig) of
+  case (decode jsonOpts :: Maybe LoginConfig) of
     Nothing -> do
-      putStrLn $ show json
+      putStrLn $ show jsonOpts
       return ()
     Just (LoginConfig name opts) -> do
       uuid <- UUID.nextRandom
