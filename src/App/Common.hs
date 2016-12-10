@@ -53,7 +53,7 @@ defaultWorld :: World
 defaultWorld = World [] []
 
 -- | Send to users who match predicate
-sendTo :: (User -> Bool) -> [User] -> ByteString -> IO ()
+sendTo :: WebSocketsData a => (User -> Bool) -> [User] -> a -> IO ()
 sendTo f users msg = do
   let sendUsers = filter f users
   forM_ sendUsers $ \(User _ _ conn) -> safeSend conn msg

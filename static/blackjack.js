@@ -152,10 +152,16 @@ function onError(evt) {
 function onMessage(evt) {
     console.log("Receieved: " + evt.data);
     writeToScreen(evt.data);
-    addCard(JSON.parse(evt.data));
+    var msg = JSON.parse(evt.data);
+    if (msg.type == "deal") {
+        addCard(msg.data);
+    } else if (msg.type == "done") {
+        websocket.close();
+        // TODO show winner[s] in a nice way
+    }
 }
 
-function sendText(json) {
-    console.log("sending text: " + json);
-    websocket.send(json);
+function sendText(msg) {
+    console.log("sending text: " + msg);
+    websocket.send(msg);
 }

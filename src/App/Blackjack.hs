@@ -4,6 +4,7 @@ module App.Blackjack (runGame) where
 
 import           Data.ByteString               (ByteString)
 import           Data.ByteString.Char8         (pack, unpack)
+import qualified Data.ByteString.Lazy          as Lazy
 import           Data.List                     (find)
 import           Data.Monoid
 import qualified Data.Text                     as Text
@@ -39,6 +40,9 @@ instance ToJSON User where
   toEncoding (User username uuid _) = pairs ("name" .= username <>
                                              "uuid" .= UUID.toText uuid)
 
+instance ToJSON BlackjackUser where
+  toJSON (BlackjackUser u _ _) = toJSON u
+
 instance ToJSON Rank where
   toJSON rank = String (Text.pack $ show rank)
 
@@ -56,9 +60,29 @@ data DealMessage = DealMessage { user :: User
 instance ToJSON DealMessage where
   toEncoding = genericToEncoding defaultOptions
 
+data DoneMessage = DoneMessage [(Int, [Int], BlackjackUser)]
+                 deriving (Show, Generic)
+
+instance ToJSON DoneMessage where
+  toEncoding = genericToEncoding defaultOptions
+
+data BlackjackMessage a = BlackjackMessage Text.Text a
+                        deriving (Show, Generic)
+instance ToJSON a => ToJSON (BlackjackMessage a) where
+  toJSON (BlackjackMessage typ msg) = object [ "type" .= typ
+                                             , "data" .= msg ]
+
+-- | Helper function for encoding a message to send to a client
+message :: ToJSON m
+        => Text.Text       -- ^ Message type
+        -> m               -- ^ Message
+        -> Lazy.ByteString -- ^ JSON encoded message
+message typ = encode . (BlackjackMessage typ)
+
 toBlackjackUser :: User -> BlackjackUser
 toBlackjackUser u = BlackjackUser u False []
 
+-- | Main game loop for running Blackjack game
 runGame :: Game -> IO ()
 runGame game@(Game _ bcast oc) = do
   putStrLn "Running Blackjack Game"
@@ -99,9 +123,9 @@ runGame game@(Game _ bcast oc) = do
   forM_ u' $ \(BlackjackUser user@(User _ _ conn) _ cards) -> do
     -- other's cards
     forM_ (filter (\(BlackjackUser u _ _) -> u /= user) u') $ \(BlackjackUser other@(User n _ _) _ cards) -> do
-      forM_ cards $ \c -> safeSend conn $ encode (DealMessage other c)
+      forM_ cards $ \c -> safeSend conn $ message "deal" (DealMessage other c)
     -- their cards
-    forM_ cards $ \c -> safeSend conn $ encode (DealMessage user c)
+    forM_ cards $ \c -> safeSend conn $ message "deal" (DealMessage user c)
 
   -- main game loop
   let loop = do
@@ -124,12 +148,12 @@ runGame game@(Game _ bcast oc) = do
                   when (bust (c : hand)) $ sitUserSTM bj user
                   return c
                 -- tell user what card they got
-                safeSend conn $ encode (DealMessage user card)
+                safeSend conn $ message "deal" (DealMessage user card)
                 -- tell the other users what they got
                 users <- bjUsers <$> readTVarIO bj
                 forM_ users $ \(BlackjackUser u@(User _ _ c) _ _) ->
                   if u /= user
-                    then safeSend c $ encode (DealMessage user card)
+                    then safeSend c $ message "deal" (DealMessage user card)
                     else return ()
           _ -> return ()
 
@@ -146,7 +170,8 @@ runGame game@(Game _ bcast oc) = do
               putStrLn $ "Winner" <> show winner
 
               -- broadcast winner
-              sendTo (const True) (gameUsers game) ("WINNER: " <> pack (show winner))
+              -- TODO handle tie
+              sendTo (const True) (gameUsers game) $ message "done" (DoneMessage $ maybe [] (\x -> [x]) winner)
               return ()
 
         if not finished
