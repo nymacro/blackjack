@@ -2,21 +2,17 @@
 module Main where
 
 import           Data.Aeson                           (decode)
-import           Data.ByteString                      (ByteString)
 import qualified Data.Map                             as Map
 import           Data.Monoid
-import           Data.Text                            hiding (filter)
 import qualified Data.Text.Lazy                       as LazyText
 import qualified Data.UUID.V4                         as UUID
 
 import           Control.Concurrent.STM
-import           Control.Monad
-import           Control.Monad.IO.Class               (MonadIO, liftIO)
+import           Control.Monad.IO.Class               (liftIO)
 
-import           Network.Wai                          (Application, Middleware)
+import           Network.Wai                          (Application)
 import           Network.Wai.Handler.Warp             (run)
 import           Network.Wai.Handler.WebSockets
-import           Network.Wai.Middleware.AddHeaders
 import           Network.Wai.Middleware.RequestLogger
 import           Network.Wai.Middleware.Static
 import           Network.WebSockets

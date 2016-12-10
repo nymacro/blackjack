@@ -2,20 +2,15 @@
 {-# LANGUAGE OverloadedStrings #-}
 module App.Blackjack (runGame) where
 
-import           Data.ByteString               (ByteString)
-import           Data.ByteString.Char8         (pack, unpack)
 import qualified Data.ByteString.Lazy          as Lazy
 import           Data.List                     (find)
 import           Data.Monoid
 import qualified Data.Text                     as Text
-import           Data.Text.Encoding            (encodeUtf8)
 import qualified Data.UUID                     as UUID
 
 import           Control.Concurrent.Chan.Unagi
 import           Control.Concurrent.STM
 import           Control.Monad
-
-import           Network.WebSockets
 
 import           App.Common
 
@@ -26,11 +21,13 @@ import           GHC.Generics
 
 data BlackjackUser = BlackjackUser { bjUser  :: User
                                    , sitting :: Bool
-                                   , bjCards :: Hand }
+                                   , bjCards :: Hand
+                                   }
                    deriving (Show, Generic)
 
 data BlackjackGame = BlackjackGame { bjUsers :: [BlackjackUser]
-                                   , bjDeck  :: Deck }
+                                   , bjDeck  :: Deck
+                                   }
                    deriving (Show, Generic)
 
 
@@ -54,7 +51,8 @@ instance ToJSON Card where
                                    , "suit" .= suit ]
 
 data DealMessage = DealMessage { user :: User
-                               , card :: Card }
+                               , card :: Card
+                               }
                  deriving (Show, Generic)
 
 instance ToJSON DealMessage where

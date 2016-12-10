@@ -10,17 +10,15 @@ import           Data.UUID                     (UUID)
 import           Control.Concurrent
 import           Control.Concurrent.Async
 import           Control.Concurrent.Chan.Unagi
-import           Control.Exception             (SomeException, catch, try)
+import           Control.Exception             (catch, try)
 import           Control.Monad                 (forM_)
 
 import           Network.WebSockets
 
-data User =
-       User
-         { userName :: Text       -- ^ User's name
-         , userUuid :: UUID       -- ^ User's UUID
-         , userConn :: Connection -- ^ User's connection
-         }
+data User = User { userName :: Text       -- ^ User's name
+                 , userUuid :: UUID       -- ^ User's UUID
+                 , userConn :: Connection -- ^ User's connection
+                 }
 
 instance Eq User where
   (User a uuid _) == (User b uuid' _) = a == b && uuid == uuid'

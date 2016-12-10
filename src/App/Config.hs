@@ -5,9 +5,8 @@ module App.Config where
 import           GHC.Generics
 
 import           Data.Aeson
-import           Data.Aeson.Types
-import           Data.Map         (Map)
-import           Data.Text        (Text)
+import           Data.Map     (Map)
+import           Data.Text    (Text)
 
 data LoginConfig = LoginConfig { name    :: Text
                                , options :: Maybe (Map Text Text) }
