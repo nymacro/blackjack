@@ -30,10 +30,7 @@ swapLobby (Lobby t) = do
   -- create a new MVar to replace the existing one which will be used
   -- to return/synchronise the game for waiting players
   m' <- newEmptyMVar
-  atomically $ do
-    m <- readTVar t
-    writeTVar t m'
-    return m
+  atomically $ swapTVar t m'
 
 -- | Get the current lobby game sync
 getLobby :: Lobby -> IO (MVar (Async (), Game))
