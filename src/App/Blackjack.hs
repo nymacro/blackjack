@@ -165,11 +165,10 @@ runGame game@(Game _ bcast oc) = do
               print users
               let winner = pickWinner_ bjCards users
 
-              putStrLn $ "Winner" <> show winner
+              putStrLn $ "Winner " <> show winner
 
-              -- broadcast winner
-              -- TODO handle tie
-              sendTo (const True) (gameUsers game) $ message "done" (DoneMessage $ maybe [] (\x -> [x]) winner)
+              -- broadcast winner[s]
+              sendTo (const True) (gameUsers game) $ message "done" (DoneMessage winner)
               return ()
 
         if not finished

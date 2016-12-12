@@ -10,14 +10,16 @@ spec = do
   describe "Blackjack" $ do
     describe "pickWinner" $ do
       it "should handle empty list" $ do
-        pickWinner [] `shouldBe` Nothing
+        pickWinner [] `shouldBe` []
       it "should pick winner correctly" $ do
         let hand1 = [Card Ace Spades, Card Two Hearts]
             hand2 = [Card Three Hearts, Card Five Clubs]
-        pickWinner [hand1, hand2] `shouldBe` Just (13, [3, 13], hand1)
+        pickWinner [hand1, hand2] `shouldBe` [(13, [3, 13], hand1)]
+        pickWinner [hand1, hand1] `shouldBe` [(13, [3, 13], hand1), (13, [3, 13], hand1)]
+        pickWinner [hand1, hand1, hand2] `shouldBe` [(13, [3, 13], hand1), (13, [3, 13], hand1)]
       it "should return Nothing on all bust" $ do
         let bust = [Card King Spades, Card King Clubs, Card King Hearts]
-        pickWinner [bust] `shouldBe` Nothing
+        pickWinner [bust] `shouldBe` []
 
     describe "tap" $ do
       it "should handle empty list" $ do

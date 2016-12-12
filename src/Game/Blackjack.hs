@@ -114,7 +114,7 @@ sumHand [] = []
 sumHand h =
   let values   = fmap (\(Card rank _) -> value rank) h
       possible = combinations values
-  in fmap sum possible
+  in sum <$> possible
 
 -- | Whether a hand is bust or not
 bust :: Hand -> Bool
@@ -124,21 +124,24 @@ bust hand = all (> 21) (sumHand hand)
 -- | Take a list of hands, and return a tuple of the winning
 -- sum, the combinations possible for the hand and the hand
 -- itself.
---
--- TODO add possibility for tie
-pickWinner :: [Hand]                   -- ^ Hands to choose winner from
-           -> Maybe (Int, [Int], Hand) -- ^ Return triple of winning number, card values and hand
+pickWinner :: [Hand]               -- ^ Hands to choose winner from
+           -> [(Int, [Int], Hand)] -- ^ Return triple of winning number, card values and hand
 pickWinner = pickWinner_ id
 
+-- | Like pickWinner, but maps the hand from another structure
+-- TODO handle "natural 21" as the top winning case
 pickWinner_ :: (a -> Hand)
             -> [a]
-            -> Maybe (Int, [Int], a)
+            -> [(Int, [Int], a)]
 pickWinner_ f hands =
-  let values  = fmap (\x -> (sumHand (f x), x)) hands
-      noBust' = fmap (\(n, x) -> (filter (<= 21) n, x)) values
-      noBust  = filter (not . null . fst) noBust'
-      tmax (ah, a) (bh, b) = compare (sum ah) (sum bh)
-      (combo, hand) = maximumBy tmax noBust
-  in if null noBust
-       then Nothing
-       else Just (maximum combo, combo, hand)
+  let values x = (sumHand (f x), x)
+      -- filter out hands which have busted
+      noBust' (n, _) = if null $ filter (<= 21) n
+                         then False
+                         else True
+      noBust  = filter noBust' (values <$> hands)
+      -- get the winning card value
+      tmax (ah, _) (bh, _) = compare (sum ah) (sum bh)
+      (maxValue, _) = maximumBy tmax noBust
+      winners = filter (\(x, _) -> maximum x == maximum maxValue) noBust
+  in fmap (\(x, y) -> (maximum x, x, y)) winners
