@@ -3,6 +3,7 @@ module Game.Blackjack where
 import           Control.Monad
 import           Data.Foldable (maximumBy)
 import           Data.Functor
+import           Data.List     (sort)
 import           Data.Monoid
 
 import           System.Random
@@ -128,6 +129,33 @@ pickWinner :: [Hand]               -- ^ Hands to choose winner from
            -> [(Int, [Int], Hand)] -- ^ Return triple of winning number, card values and hand
 pickWinner = pickWinner_ id
 
+-- | Value of best hand (assuming the hand isn't busted)
+best :: Hand -> Maybe Int
+best hand = let values x = sumHand x
+                noBust x = case filter (<= 21) x of
+                             [] -> Nothing
+                             z  -> Just z
+                z = sort <$> noBust (values hand)
+            in case z of
+                 Nothing     -> Nothing
+                 Just (x:xs) -> Just x
+
+-- | Compare two hands and see which is better
+-- TODO blackjack
+handCompare :: Hand -> Hand -> Ordering
+handCompare a b
+  | bust a && bust b = EQ
+  | bust a = LT
+  | bust b = GT
+--  | blackjack a && blackjack b = EQ
+--  | blackjack a = GT
+--  | blackjack b = LT
+  | otherwise = case compare <$> best a <*> best b of
+                  Just x -> x
+                  _      -> undefined
+  where
+    blackjack x = length x == 2 && any (\x -> sum x == 21) x
+
 -- | Like pickWinner, but maps the hand from another structure
 -- TODO handle "natural 21" as the top winning case
 pickWinner_ :: (a -> Hand)
@@ -139,9 +167,8 @@ pickWinner_ f hands =
       noBust' (n, _) = if null $ filter (<= 21) n
                          then False
                          else True
-      noBust  = filter noBust' (values <$> hands)
+      noBust = filter noBust' (values <$> hands)
       -- get the winning card value
-      tmax (ah, _) (bh, _) = compare (sum ah) (sum bh)
-      (maxValue, _) = maximumBy tmax noBust
+      (maxValue, _) = maximumBy handCompare noBust
       winners = filter (\(x, _) -> maximum x == maximum maxValue) noBust
   in fmap (\(x, y) -> (maximum x, x, y)) winners
