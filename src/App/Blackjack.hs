@@ -58,7 +58,7 @@ data DealMessage = DealMessage { user :: User
 instance ToJSON DealMessage where
   toEncoding = genericToEncoding defaultOptions
 
-data DoneMessage = DoneMessage [(Int, [Int], BlackjackUser)]
+data DoneMessage = DoneMessage [(Int, BlackjackUser)]
                  deriving (Show, Generic)
 
 instance ToJSON DoneMessage where

@@ -31,6 +31,9 @@ restApp world = scottyApp $ do
   middleware logStdout
   middleware $ staticPolicy $ addBase "static"
 
+  get "/" $ do
+    file "static/blackjack.html"
+
   get "/lobby" $ do
     state <- liftIO $ readTVarIO world
     text $ LazyText.pack $ show state

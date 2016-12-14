@@ -8,14 +8,29 @@ import           Game.Blackjack
 spec :: Spec
 spec = do
   describe "Blackjack" $ do
+    describe "handCompare" $ do
+      let natural = [Card Ace Hearts, Card King Spades]
+      it "should allow equality" $ do
+        handCompare [] [] `shouldBe` EQ
+        handCompare [Card Ace Spades] [Card Ace Hearts] `shouldBe` EQ
+        handCompare [Card Ace Spades] [Card Seven Hearts, Card Four Hearts] `shouldBe` EQ
+        handCompare natural natural `shouldBe` EQ
+      it "should favour natural blackjack" $ do
+        handCompare natural [Card Ace Spades, Card Five Hearts, Card Five Clubs] `shouldBe` GT
+        handCompare [Card Ace Spades, Card Five Hearts, Card Five Clubs] natural `shouldBe` LT
+
     describe "best" $ do
       it "should pick best value" $ do
         let hand1 = [Card Ace Spades]
             hand2 = [Card Ace Spades, Card King Hearts]
             hand3 = [Card King Hearts, Card Five Clubs]
-        best hand1 `shouldBe` Just 11
-        best hand2 `shouldBe` Just 21
-        best hand3 `shouldBe` Just 16
+        best hand1 `shouldBe` Just [11]
+        best hand2 `shouldBe` Just [11, 10]
+        best hand3 `shouldBe` Just [10, 5]
+      it "should handle bust" $ do
+        best [Card King Hearts, Card Queen Hearts, Card Ten Spades] `shouldBe` Nothing
+      it "should handle edge cases" $ do
+        best [] `shouldBe` Nothing
 
     describe "pickWinner" $ do
       it "should handle empty list" $ do
@@ -23,13 +38,13 @@ spec = do
       it "should pick winner correctly" $ do
         let hand1 = [Card Ace Spades, Card Two Hearts]
             hand2 = [Card Three Hearts, Card Five Clubs]
-        pickWinner [hand1, hand2] `shouldBe` [(13, [3, 13], hand1)]
-        pickWinner [hand1, hand1] `shouldBe` [(13, [3, 13], hand1), (13, [3, 13], hand1)]
-        pickWinner [hand1, hand1, hand2] `shouldBe` [(13, [3, 13], hand1), (13, [3, 13], hand1)]
+        pickWinner [hand1, hand2] `shouldBe` [(13, hand1)]
+        pickWinner [hand1, hand1] `shouldBe` [(13, hand1), (13, hand1)]
+        pickWinner [hand1, hand1, hand2] `shouldBe` [(13, hand1), (13, hand1)]
       it "should pick winner correctly (blackjack)" $ do
         let hand1 = [Card Ace Spades, Card King Hearts]
             hand2 = [Card Ace Spades, Card Five Hearts, Card Five Clubs]
-        pickWinner [hand1, hand2] `shouldBe` [(21, [11, 21], hand1)]
+        pickWinner [hand1, hand2] `shouldBe` [(21, hand1)]
       it "should return Nothing on all bust" $ do
         let bust = [Card King Spades, Card King Clubs, Card King Hearts]
         pickWinner [bust] `shouldBe` []
