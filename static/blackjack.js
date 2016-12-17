@@ -44,9 +44,10 @@ function cardImageUrl(card) {
 }
 
 function clearGame() {
-    while (hand.firstChild) {
-        hand.removeChild(hand.firstChild);
-    }
+    dealVue.reset();
+    // while (hand.firstChild) {
+    //     hand.removeChild(hand.firstChild);
+    // }
     while (others.firstChild) {
         others.removeChild(others.firstChild);
     }
@@ -91,6 +92,9 @@ function addCard(card) {
     var toHand = null;
     if (name == nameInput.value) {
         toHand = hand;
+
+        dealVue.addCard(card.card);
+        return;
     } else {
         // create if it doesn't exist
         toHand = document.getElementById("player_" + name);
@@ -165,3 +169,18 @@ function sendText(msg) {
     console.log("sending text: " + msg);
     websocket.send(msg);
 }
+
+var dealVue = new Vue({
+    el: "#cards",
+    data: {
+        items: []
+    },
+    methods: {
+        reset: function() {
+            this.items = [];
+        },
+        addCard: function(card) {
+            this.items.push("<img class=\"card\" src=\"" + cardImageUrl(card) + "\" />");
+        }
+    }
+});

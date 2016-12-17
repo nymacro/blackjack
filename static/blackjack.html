@@ -26,6 +26,17 @@
       .card {
         margin-right: 12px;
         width: 128px;
+        color: black;
+      }
+      .list {
+        display: inline-block;        
+      }
+      .list-enter-active, .list-leave-active {
+        transition: all 0.5s linear;
+      }
+      .list-enter, .list-leave-active {
+        opacity: 0;
+        transform: translate(-50px, -300px);
       }
       .card-small {
         margin-right: 8px;
@@ -47,6 +58,7 @@
         font-weight: bold;
       }
     </style>
+    <script src="https://unpkg.com/vue/dist/vue.js"></script>
   </head>
   <body>
     <div class="container">
@@ -78,12 +90,20 @@
         
         <h2>Hand</h2>
         <div class="well well-sm" style="margin-bottom:0px;">
-          <div id="cards"></div>
+          <div id="cards">
+            <transition-group name="list" tag="p">
+              <span v-for="item in items" v-bind:key="item" class="list">
+                <div v-html="item"></div>
+              </span>
+            </transition-group>
+          </div>
         </div>
         
         <h2>Other's Hands</h2>
         <div class="well well-sm" style="margin-bottom:0px;">
-          <div id="others"></div>
+          <div id="others">
+
+          </div>
         </div>
         
       </div>
