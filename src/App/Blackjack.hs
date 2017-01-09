@@ -80,11 +80,15 @@ message typ = encode . (BlackjackMessage typ)
 toBlackjackUser :: User -> BlackjackUser
 toBlackjackUser u = BlackjackUser u False []
 
+newDealer = BlackjackUser <$> newUser "Dealer" Nothing <*> return True <*> return []
+
 -- | Main game loop for running Blackjack game
 runGame :: Game -> IO ()
-runGame game@(Game _ bcast oc) = do
+runGame game@(Game _ bcast oc disconnect) = do
   putStrLn "Running Blackjack Game"
   print game
+
+  dealer <- newDealer
 
   -- set up blackjack game
   let players = toBlackjackUser <$> (gameUsers game)
@@ -108,26 +112,30 @@ runGame game@(Game _ bcast oc) = do
   let dealAll users deck = dealAll' users deck []
       dealAll' [] deck dealt = (dealt, deck)
       dealAll' (user : users) deck dealt =
+        let (cards, deck') = deal2 deck
+        in dealAll' users deck' (user { bjCards = cards <> bjCards user } : dealt)
+      deal2 deck =
         let Just (card1, deck')  = tap deck
             Just (card2, deck'') = tap deck'
-        in dealAll' users deck'' (user { bjCards = card1 : card2 : bjCards user } : dealt)
+        in ([card1, card2], deck'')
   atomically $ do
     modifyTVar bj $ \(BlackjackGame users deck) ->
-      let (users', deck') = dealAll users deck
-      in BlackjackGame users' deck'
+      let (users', deck')   = dealAll users deck
+          Just (dealerCard, deck'') = tap deck'
+      in BlackjackGame (dealer { bjCards = [dealerCard] } : users') deck''
 
   -- tell users which cards they were dealt
   u' <- bjUsers <$> readTVarIO bj
   forM_ u' $ \(BlackjackUser user@(User _ _ conn) _ cards) -> do
     -- other's cards
     forM_ (filter (\(BlackjackUser u _ _) -> u /= user) u') $ \(BlackjackUser other@(User n _ _) _ cards) -> do
-      forM_ cards $ \c -> safeSend conn $ message "deal" (DealMessage other c)
+      forM_ cards $ \c -> safeSendM conn $ message "deal" (DealMessage other c)
     -- their cards
-    forM_ cards $ \c -> safeSend conn $ message "deal" (DealMessage user c)
+    forM_ cards $ \c -> safeSendM conn $ message "deal" (DealMessage user c)
 
   -- main game loop
   let loop = do
-        (user@(User name _ conn), d) <- readChan oc
+        (user@(User _ _ conn), d) <- readChan oc
         case d of
           "DISCONNECT" -> atomically $ sitUserSTM bj user
           "sit" -> atomically $ sitUserSTM bj user
@@ -146,12 +154,12 @@ runGame game@(Game _ bcast oc) = do
                   when (bust (c : hand)) $ sitUserSTM bj user
                   return c
                 -- tell user what card they got
-                safeSend conn $ message "deal" (DealMessage user card)
+                safeSendM conn $ message "deal" (DealMessage user card)
                 -- tell the other users what they got
                 users <- bjUsers <$> readTVarIO bj
                 forM_ users $ \(BlackjackUser u@(User _ _ c) _ _) ->
                   if u /= user
-                    then safeSend c $ message "deal" (DealMessage user card)
+                    then safeSendM c $ message "deal" (DealMessage user card)
                     else return ()
           _ -> return ()
 
@@ -160,6 +168,20 @@ runGame game@(Game _ bcast oc) = do
 
         -- pick a winner if everyone is sitting (or has busted)
         let final = do
+              -- play the dealer
+              Just d <- findUser bj (bjUser dealer)
+              deck <- bjDeck <$> readTVarIO bj
+              let newHand = playDealer (bjCards d) deck
+
+              atomically $ modifyTVar bj $ \s -> modUser s (bjUser dealer) (\x -> x { bjCards = newHand })
+
+              -- Show everyone the dealer's hand
+              users <- bjUsers <$> readTVarIO bj
+              forM_ users $ \(BlackjackUser u@(User _ _ c) _ _) ->
+                forM_ (take (length newHand - 1) newHand) $ \card ->
+                  safeSendM c $ message "deal" (DealMessage (bjUser dealer) card)
+
+              -- find the winner
               putStrLn "Game finished"
               users <- bjUsers <$> readTVarIO bj
               print users
@@ -175,3 +197,13 @@ runGame game@(Game _ bcast oc) = do
           then loop
           else final
   loop
+
+-- | Play the dealers hand
+playDealer :: Hand -> Deck -> Hand
+playDealer hand deck =
+  case bestValue hand of
+     Nothing -> hand
+     Just n  -> if n > 17
+                 then hand
+                 else let Just (card, deck') = tap deck
+                      in playDealer (card : hand) deck'

@@ -5,7 +5,6 @@ import           Data.Aeson                           (decode)
 import qualified Data.Map                             as Map
 import           Data.Monoid
 import qualified Data.Text.Lazy                       as LazyText
-import qualified Data.UUID.V4                         as UUID
 
 import           Control.Concurrent.STM
 import           Control.Monad.IO.Class               (liftIO)
@@ -56,8 +55,7 @@ wsApp lobby world pending = do
       putStrLn $ show jsonOpts
       return ()
     Just (LoginConfig name opts) -> do
-      uuid <- UUID.nextRandom
-      let user = User name uuid conn
+      user <- newUser name (Just conn)
       putStrLn $ show user <> " connected"
 
       putStrLn $ show opts

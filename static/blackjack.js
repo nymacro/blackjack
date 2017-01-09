@@ -126,6 +126,10 @@ function onOpen(evt) {
     instruments.style.display = 'none';
     contents.style.display = 'block';
 
+    while (nameText.firstChild) {
+        nameText.removeChild(nameText.firstChild);
+    }
+
     var node = document.createElement("span");
     node.appendChild(document.createTextNode("Playing as "));
     var b = document.createElement("b");
@@ -136,15 +140,11 @@ function onOpen(evt) {
 
 function onClose(evt) {
     instruments.style.display = 'block';
-    contents.style.display = 'none';
+    //contents.style.display = 'none';
 
     updateDisconnected();
     alerts.className = "alert alert-warning";
     alerts.innerHTML = "Disconnected";
-
-    while (nameText.firstChild) {
-        nameText.removeChild(nameText.firstChild);
-    }
 }
 
 function onError(evt) {

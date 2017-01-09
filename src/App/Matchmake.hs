@@ -37,13 +37,17 @@ getLobby :: Lobby -> IO (MVar (Async (), Game))
 getLobby (Lobby t) = readTVarIO t
 
 -- | Add game to world
-addGame :: Game -> TVar World -> IO ()
+addGame :: Game       -- ^ Game to add
+        -> TVar World -- ^ World state
+        -> IO ()
 addGame g world = do
   atomically $
     modifyTVar world (\w@(World _ games) -> w { worldGames = g : games })
 
 -- | Disconnect game
-disconnectGame :: Game -> TVar World -> IO ()
+disconnectGame :: Game       -- ^ Game to disconnect
+               -> TVar World -- ^ World state
+               -> IO ()
 disconnectGame game world = do
   atomically $ modifyTVar world removeGame
 
@@ -51,7 +55,9 @@ disconnectGame game world = do
     removeGame w = w { worldGames = filter (/= game) (worldGames w) }
 
 -- | Take players from world lobby
-takePlayers :: Int -> TVar World -> IO (Maybe [User])
+takePlayers :: Int               -- ^ Number of players to take
+            -> TVar World        -- ^ World state
+            -> IO (Maybe [User]) -- ^ Maybe players
 takePlayers numPlayers world =
   atomically $ do
     w <- readTVar world
@@ -63,10 +69,10 @@ takePlayers numPlayers world =
         return $ Just players
 
 -- | Find game
-findGame :: Int              -- ^ Number of players required for a game
-         -> Lobby            -- ^ Lobby state
-         -> TVar World       -- ^ World state
-         -> (Game -> IO ())    -- ^ Game loop
+findGame :: Int                         -- ^ Number of players required for a game
+         -> Lobby                       -- ^ Lobby state
+         -> TVar World                  -- ^ World state
+         -> (Game -> IO ())               -- ^ Game loop
          -> IO (MVar (Async (), Game))   -- ^ Found game
 findGame numPlayers lobby world runGame = do
   players <- takePlayers numPlayers world
@@ -75,7 +81,8 @@ findGame numPlayers lobby world runGame = do
     Just p  -> do
       -- set up game and run
       (bcast, oc) <- newChan
-      let g = Game p bcast oc
+      disconnect  <- newEmptyMVar
+      let g = Game p bcast oc disconnect
 
       m <- swapLobby lobby
 
@@ -97,16 +104,19 @@ wsMatchmake :: User          -- ^ Joining user
             -> IO ()
 wsMatchmake user@(User _ _ conn) lobby world numPlayers runGame = do
   m <- findGame numPlayers lobby world runGame
-  (main, g@(Game _ bcast _)) <- readMVar m
+  (main, g@(Game _ bcast _ _)) <- readMVar m
 
   -- create client thread
   a <- async $ do
-    -- make sure we tell the game when a user disconnects
-    let fin = writeChan bcast (user, "DISCONNECT") >> putStrLn ("Client left " <> show user)
-    flip finally fin $
-      forever $ do
-        d <- receiveData conn
-        writeChan bcast (user, d)
+    case conn of
+      Nothing -> return ()
+      Just c  -> do
+        -- make sure we tell the game when a user disconnects
+        let fin = writeChan bcast (user, "DISCONNECT") >> putStrLn ("Client left " <> show user)
+        flip finally fin $
+          forever $ do
+            d <- receiveData c
+            writeChan bcast (user, d)
 
   -- wait for game to finish and clean up
   wait main
@@ -115,4 +125,3 @@ wsMatchmake user@(User _ _ conn) lobby world numPlayers runGame = do
   cancel a
 
   return ()
-
