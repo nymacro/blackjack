@@ -43,10 +43,9 @@ instance Show User where
 
 data Game =
        Game
-         { gameUsers      :: [User]                     -- ^ User's in a game
-         , gameInChan     :: InChan (User, ByteString)  -- ^ Input channel (broadcast)
-         , gameOutChan    :: OutChan (User, ByteString) -- ^ Output channel (client output)
-         , gameDisconnect :: MVar ()                     -- ^ Disconnect sync
+         { gameUsers   :: [User]                     -- ^ User's in a game
+         , gameInChan  :: InChan (User, ByteString)  -- ^ Input channel (broadcast)
+         , gameOutChan :: OutChan (User, ByteString) -- ^ Output channel (client output)
          }
   deriving (Eq)
 

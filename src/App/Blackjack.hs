@@ -84,7 +84,7 @@ newDealer = BlackjackUser <$> newUser "Dealer" Nothing <*> return True <*> retur
 
 -- | Main game loop for running Blackjack game
 runGame :: Game -> IO ()
-runGame game@(Game _ bcast oc disconnect) = do
+runGame game@(Game _ bcast oc) = do
   putStrLn "Running Blackjack Game"
   print game
 
@@ -118,6 +118,7 @@ runGame game@(Game _ bcast oc disconnect) = do
         let Just (card1, deck')  = tap deck
             Just (card2, deck'') = tap deck'
         in ([card1, card2], deck'')
+
   atomically $ do
     modifyTVar bj $ \(BlackjackGame users deck) ->
       let (users', deck')   = dealAll users deck
@@ -173,7 +174,8 @@ runGame game@(Game _ bcast oc disconnect) = do
               deck <- bjDeck <$> readTVarIO bj
               let newHand = playDealer (bjCards d) deck
 
-              atomically $ modifyTVar bj $ \s -> modUser s (bjUser dealer) (\x -> x { bjCards = newHand })
+              atomically $ modifyTVar bj $
+                \s -> modUser s (bjUser dealer) (\x -> x { bjCards = newHand })
 
               -- Show everyone the dealer's hand
               users <- bjUsers <$> readTVarIO bj

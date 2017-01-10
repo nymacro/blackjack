@@ -9,7 +9,7 @@ Browser websocket Blackjack
 
 Browse to `localhost:3000/blackjack.html`
 
-# TODO
+## TODO
 
 - [ ] Add timeout/release for player queue to prevent indefinite queuing
 - [ ] Make code more beautiful

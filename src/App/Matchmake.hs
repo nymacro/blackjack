@@ -81,8 +81,7 @@ findGame numPlayers lobby world runGame = do
     Just p  -> do
       -- set up game and run
       (bcast, oc) <- newChan
-      disconnect  <- newEmptyMVar
-      let g = Game p bcast oc disconnect
+      let g = Game p bcast oc
 
       m <- swapLobby lobby
 
@@ -104,7 +103,7 @@ wsMatchmake :: User          -- ^ Joining user
             -> IO ()
 wsMatchmake user@(User _ _ conn) lobby world numPlayers runGame = do
   m <- findGame numPlayers lobby world runGame
-  (main, g@(Game _ bcast _ _)) <- readMVar m
+  (main, g@(Game _ bcast _)) <- readMVar m
 
   -- create client thread
   a <- async $ do
