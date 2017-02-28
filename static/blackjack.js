@@ -120,7 +120,7 @@ function addCard(card) {
 }
 
 function onOpen(evt) {
-    alerts.innerHTML = "Connected to " + wsUri;
+    alerts.innerHTML = "Waiting for other players.";
     websocket.send(JSON.stringify(config()));
 
     instruments.style.display = 'none';
@@ -140,6 +140,7 @@ function onOpen(evt) {
 
 function onClose(evt) {
     instruments.style.display = 'block';
+    alerts.style.display = 'block';
     //contents.style.display = 'none';
 
     updateDisconnected();
@@ -154,6 +155,9 @@ function onError(evt) {
 }
 
 function onMessage(evt) {
+    alerts.innerHTML = "Playing.";
+    alerts.style.display = 'none';
+
     console.log("Receieved: " + evt.data);
     writeToScreen(evt.data);
     var msg = JSON.parse(evt.data);

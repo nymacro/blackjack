@@ -80,7 +80,9 @@ message typ = encode . (BlackjackMessage typ)
 toBlackjackUser :: User -> BlackjackUser
 toBlackjackUser u = BlackjackUser u False []
 
-newDealer = BlackjackUser <$> newUser "Dealer" Nothing <*> return True <*> return []
+-- | Create a new dealer
+newDealer :: IO BlackjackUser
+newDealer = BlackjackUser <$> newUser "Dealer" Nothing <*> pure True <*> pure []
 
 -- | Main game loop for running Blackjack game
 runGame :: Game -> IO ()
