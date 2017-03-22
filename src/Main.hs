@@ -67,11 +67,11 @@ wsApp lobby world pending = do
       atomically $
         modifyTVar world (\w@(World lobby _) -> w { worldLobby = user : lobby })
 
-      -- see if options have players
-      let numPlayers = Map.lookup "players" <$> opts
+      -- maximum number of players in a game
+      let numPlayers = 3
 
       case path of
-        "/blackjack" -> wsMatchmake user lobby world 3 Blackjack.runGame
+        "/blackjack" -> wsMatchmake user lobby world numPlayers Blackjack.runGame
         _            -> return ()
 
 main :: IO ()
