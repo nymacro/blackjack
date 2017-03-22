@@ -69,6 +69,8 @@ takePlayers numPlayers world =
         return $ Just players
 
 -- | Find game
+-- Will return existing Lobby if still waiting for players, otherwise will run
+-- the game and return the new lobby to use for new players.
 findGame :: Int                         -- ^ Number of players required for a game
          -> Lobby                       -- ^ Lobby state
          -> TVar World                  -- ^ World state
