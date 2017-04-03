@@ -9,8 +9,6 @@ import           Data.Monoid
 
 import           System.Random
 
-import           Debug.Trace
-
 -- | A card's suit
 data Suit = Spades
           | Hearts
@@ -193,3 +191,13 @@ pickWinner_ f hands =
                             Nothing -> []
                             Just y  -> x : takeWhile (\(y, _) -> ((fst x) `handCompare` y) == EQ) xs
   in fmt flt
+
+-- | Play the dealers hand
+playDealer :: Hand -> Deck -> (Hand, Deck)
+playDealer hand deck =
+  case bestValue hand of
+     Nothing -> (hand, deck)
+     Just n  -> if n > 17
+                 then (hand, deck)
+                 else let Just (card, deck') = tap deck
+                      in playDealer (card : hand) deck'

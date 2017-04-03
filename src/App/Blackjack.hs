@@ -94,7 +94,8 @@ runGame game@(Game _ bcast oc) = do
 
   -- set up blackjack game
   let players = toBlackjackUser <$> (gameUsers game)
-  bj <- newTVarIO =<< (return . (BlackjackGame players)) =<< shuffleDeck (join $ replicate 6 defaultDeck)
+  bj <- newTVarIO =<< (return . (BlackjackGame players))
+                  =<< shuffleDeck (join $ replicate 6 defaultDeck)
 
   -- shared functions
   let apply u f bu = if bjUser bu == u
@@ -138,8 +139,8 @@ runGame game@(Game _ bcast oc) = do
 
   -- main game loop
   let loop = do
-        (user@(User _ _ conn), d) <- readChan oc
-        case d of
+        (user@(User _ _ conn), msg) <- readChan oc
+        case msg of
           "DISCONNECT" -> atomically $ sitUserSTM bj user
           "sit" -> atomically $ sitUserSTM bj user
           "tap" -> do
@@ -174,7 +175,10 @@ runGame game@(Game _ bcast oc) = do
               -- play the dealer
               Just d <- findUser bj (bjUser dealer)
               deck <- bjDeck <$> readTVarIO bj
-              let newHand = playDealer (bjCards d) deck
+              putStrLn "Dealer hands:"
+              print $ bjCards d
+              let (newHand, _) = playDealer (bjCards d) deck
+              print newHand
 
               atomically $ modifyTVar bj $
                 \s -> modUser s (bjUser dealer) (\x -> x { bjCards = newHand })
@@ -182,7 +186,7 @@ runGame game@(Game _ bcast oc) = do
               -- Show everyone the dealer's hand
               users <- bjUsers <$> readTVarIO bj
               forM_ users $ \(BlackjackUser u@(User _ _ c) _ _) ->
-                forM_ (take (length newHand - 1) newHand) $ \card ->
+                forM_ (reverse $ take (length newHand - 1) newHand) $ \card ->
                   safeSendM c $ message "deal" (DealMessage (bjUser dealer) card)
 
               -- find the winner
@@ -201,13 +205,3 @@ runGame game@(Game _ bcast oc) = do
           then loop
           else final
   loop
-
--- | Play the dealers hand
-playDealer :: Hand -> Deck -> Hand
-playDealer hand deck =
-  case bestValue hand of
-     Nothing -> hand
-     Just n  -> if n > 17
-                 then hand
-                 else let Just (card, deck') = tap deck
-                      in playDealer (card : hand) deck'

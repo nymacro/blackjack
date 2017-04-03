@@ -14,33 +14,38 @@ import           Network.WebSockets
 
 import           App.Common
 
--- | Lobby state. Used for synchronising players when finding a match
--- The first MVar is an indicator for whether a maximum wait thread has been
--- launched. The second MVar synchronises the running game across threads.
-data Lobby = Lobby (TVar (MVar (), MVar (Async (), Game)))
 
-unLobby :: Lobby -> (TVar (MVar (), MVar (Async (), Game)))
-unLobby (Lobby l) = l
+-- | Lobby state
+-- The first MVar is an indicator for whether a maximum wait thread has been launched.
+-- The second MVar specifies whether the game is being launched (or is about to be).
+type LobbyData = ((MVar (), MVar ()), MVar (Async (), Game))
+
+-- | Lobby state. Used for synchronising players when finding a match
+data Lobby = Lobby (TVar LobbyData)
+
+emptyLobbyData :: IO LobbyData
+emptyLobbyData = do
+  m <- newEmptyMVar
+  m' <- newEmptyMVar
+  m'' <- newEmptyMVar
+  return ((m, m'), m'')
 
 -- | Create new lobby state
 newLobby :: IO Lobby
 newLobby = do
-  m <- newEmptyMVar
-  m' <- newEmptyMVar
-  t <- newTVarIO (m, m')
+  t <- newTVarIO =<< emptyLobbyData
   return $ Lobby t
 
 -- | Create a new lobby game and return previously filled game sync
-swapLobby :: Lobby -> IO (MVar (), MVar (Async (), Game))
+swapLobby :: Lobby -> IO LobbyData
 swapLobby (Lobby t) = do
   -- create a new MVar to replace the existing one which will be used
   -- to return/synchronise the game for waiting players
-  m' <- newEmptyMVar
-  m'' <- newEmptyMVar
-  atomically $ swapTVar t (m', m'')
+  m <- emptyLobbyData
+  atomically $ swapTVar t m
 
 -- | Get the current lobby game sync
-getLobby :: Lobby -> IO (MVar (), MVar (Async (), Game))
+getLobby :: Lobby -> IO LobbyData
 getLobby (Lobby t) = readTVarIO t
 
 -- | Add game to world
@@ -75,7 +80,7 @@ takePlayers numPlayers world =
         writeTVar world w { worldLobby = rest }
         return $ Just players
 
--- | Return all waiting players
+-- | Return all waiting players and remove them from the world state
 takeAllPlayers :: TVar World
                -> IO [User]
 takeAllPlayers world =
@@ -96,7 +101,8 @@ findGame :: Int                         -- ^ Maximum number of players for a gam
 findGame numPlayers lobby world runGame = do
   players <- takePlayers numPlayers world
 
-  let run p = do
+  let maxWaitTime = 10 * 1000000 -- 10 seconds
+      run p = do
         -- set up game and run
         (bcast, oc) <- newChan
         let g = Game p bcast oc
@@ -112,32 +118,32 @@ findGame numPlayers lobby world runGame = do
 
         return m
 
+  ((w, s), l) <- getLobby lobby
+
   case players of
     Nothing -> do
       -- try and start the maximum wait thread (but only if one does not already
       -- exist for this lobby)
-      (w, l) <- getLobby lobby
       start <- tryPutMVar w ()
       when start $ do
         _ <- forkIO $ do
           putStrLn "Starting wait thread"
-          threadDelay $ 10 * 1000000 -- 10 seconds
-          -- only run game if we haven't started already -- although this suffers
-          -- from a potential data-race on MVar l, where it may be possible a
-          -- player has joined and hit the maximum player cap, but also the
-          -- waiting thread has finished its delay. There probably needs to be
-          -- a better abstraction of the current Lobby to prevent such a case.
-          gameNotStarted <- isEmptyMVar l
-          if gameNotStarted
-            then do
-              p <- takeAllPlayers world
-              run p >> return ()
-            else do
-              putStrLn "Timer exceeded and game already started..."
-              return ()
+          threadDelay maxWaitTime
+          -- only run game if it hasn't been started already (or is about to be
+          -- started)
+          startGame <- tryPutMVar s ()
+          when startGame $ do
+            p <- takeAllPlayers world
+            run p >> return ()
         return ()
-      return =<< snd <$> getLobby lobby
-    Just p  -> run p
+      return l
+    Just p  -> do
+      startGame <- tryPutMVar s ()
+      if startGame
+        then do
+          run p
+        else do
+          return l
 
 -- | Generic matchmaking websockets app
 wsMatchmake :: User          -- ^ Joining user

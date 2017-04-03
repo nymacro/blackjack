@@ -31,6 +31,9 @@ spec = do
         best [Card King Hearts, Card Queen Hearts, Card Ten Spades] `shouldBe` Nothing
       it "should handle edge cases" $ do
         best [] `shouldBe` Nothing
+      it "should handle edge" $ do
+        bestValue [Card Ten Diamonds, Card Nine Diamonds] `shouldBe` Just 19
+        bestValue [Card Ten Diamonds, Card Nine Diamonds, Card Three Hearts] `shouldBe` Nothing
 
     describe "pickWinner" $ do
       it "should handle empty list" $ do
@@ -85,3 +88,12 @@ spec = do
         combinations [[1], [2], [3]] `shouldBe` [[1, 2, 3]]
         combinations [[1], [2, 3]] `shouldBe` [[1, 2], [1, 3]]
         combinations [[1, 10], [2, 3]] `shouldBe` [[1, 2], [1, 3], [10, 2], [10, 3]]
+
+    describe "playDealer" $ do
+      it "should do the right thing" $ do
+        playDealer [Card Queen Clubs] [Card Six Hearts, Card Seven Hearts]
+          `shouldBe` [Card Seven Hearts, Card Six Hearts, Card Queen Clubs]
+        playDealer [Card King Clubs] [Card Ace Hearts, Card King Diamonds]
+          `shouldBe` [Card Ace Hearts, Card King Clubs]
+        playDealer [Card Jack Spades] [Card Eight Spades,Card Seven Spades]
+          `shouldBe` [Card Eight Spades, Card Jack Spades]
