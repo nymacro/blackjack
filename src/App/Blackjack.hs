@@ -141,9 +141,9 @@ runGame game@(Game _ bcast oc) = do
   let loop = do
         (user@(User _ _ conn), msg) <- readChan oc
         case msg of
-          "DISCONNECT" -> atomically $ sitUserSTM bj user
-          "sit" -> atomically $ sitUserSTM bj user
-          "tap" -> do
+          GameMsgDisconnect -> atomically $ sitUserSTM bj user
+          GameMsgData "sit" -> atomically $ sitUserSTM bj user
+          GameMsgData "tap" -> do
             mu <- findUser bj user
             case mu of
               Nothing -> return ()

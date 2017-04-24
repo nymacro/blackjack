@@ -141,14 +141,15 @@ pickWinner = pickWinner_ id
 -- | Value of best hand (assuming the hand isn't busted)
 best :: Hand        -- ^ Hand to find best value of
      -> Maybe [Int] -- ^ Best card value combinations
-best hand = let values x = valueCombinations hand
-                noBust x = case filter (\x -> sum x <= 21) x of
+best hand = let values _ = valueCombinations hand
+                noBust x = case filter (\y -> sum y <= 21) x of
                              [] -> Nothing
-                             x  -> Just x
+                             y  -> Just y
                 z = reverse . sort <$> noBust (values hand)
             in case z of
-                 Nothing     -> Nothing
-                 Just (x:xs) -> Just x
+                 Nothing    -> Nothing
+                 Just []    -> Nothing
+                 Just (x:_) -> Just x
 
 -- | Get the best value combination for a hand
 bestValue :: Hand -> Maybe Int
@@ -174,25 +175,30 @@ blackjack hand = case best hand of
                     Just y  -> length y == 2 && (sum y == 21)
 
 -- | Like pickWinner, but maps the hand from another structure
--- TODO handle "natural 21" as the top winning case
 pickWinner_ :: (a -> Hand) -- ^ Mapping function to Hand
-            -> [a]        -- ^ Array of items to map to Hands
-            -> [(Int, a)] -- ^ Tuple of best value combination, and the given a
+            -> [a]         -- ^ Array of items to map to Hands
+            -> [(Int, a)]  -- ^ Tuple of best value combination, and the given a
 pickWinner_ f hands =
-  let srt = reverse . sortBy (\(a, _) (b, _) -> a `handCompare` b) $ fmap (\x -> (f x, x)) hands
+  let -- hands, sorted by best value
+      srt = reverse . sortBy (\(a, _) (b, _) -> a `handCompare` b) $ fmap (\x -> (f x, x)) hands
+      -- transform hands
       fmt w = flip mapMaybe w $ \(x, a) -> let b = bestValue x
                                           in case b of
                                                Nothing -> Nothing
                                                Just y  -> Just (y, a)
+      -- filtered winners
       flt = case srt of
               [] -> []
               (x@(a, _):xs) -> let b = bestValue a
-                       in case b of
-                            Nothing -> []
-                            Just y  -> x : takeWhile (\(y, _) -> ((fst x) `handCompare` y) == EQ) xs
+                               in case b of
+                                    Nothing -> []
+                                    -- take all winners (i.e. hands equal to the winning hand)
+                                    Just _  -> x : takeWhile (\(y, _) ->
+                                                                ((fst x) `handCompare` y) == EQ) xs
   in fmt flt
 
--- | Play the dealers hand
+-- | Play the dealers hand. Hits on 17 or less
+-- Returns a pair with the hand with dealt cards, along with the remainder of the deck.
 playDealer :: Hand -> Deck -> (Hand, Deck)
 playDealer hand deck =
   case bestValue hand of

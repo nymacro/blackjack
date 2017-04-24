@@ -41,11 +41,15 @@ noUser = User undefined undefined undefined
 instance Show User where
   show (User a _ _) = show a
 
+data GameMsg = GameMsgDisconnect
+             | GameMsgData ByteString
+             deriving (Show, Eq)
+
 data Game =
        Game
-         { gameUsers   :: [User]                     -- ^ User's in a game
-         , gameInChan  :: InChan (User, ByteString)  -- ^ Input channel (broadcast)
-         , gameOutChan :: OutChan (User, ByteString) -- ^ Output channel (client output)
+         { gameUsers   :: [User]                  -- ^ User's in a game
+         , gameInChan  :: InChan (User, GameMsg)  -- ^ Input channel (broadcast)
+         , gameOutChan :: OutChan (User, GameMsg) -- ^ Output channel (client output)
          }
   deriving (Eq)
 

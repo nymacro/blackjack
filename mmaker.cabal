@@ -14,8 +14,21 @@ cabal-version:       >=1.10
 
 library
   exposed-modules:     Game.Blackjack
+                     , App.Blackjack
+                     , App.Common
+                     , App.Config
+                     , App.Matchmake
   other-extensions:    OverloadedStrings
   build-depends:       random
+                     , aeson
+                     , containers
+                     , text
+                     , websockets
+                     , unagi-chan
+                     , uuid
+                     , async
+                     , bytestring
+                     , stm
   default-language:    Haskell2010
   hs-source-dirs:      src
   build-depends:       base >= 4.7 && < 5
@@ -31,26 +44,37 @@ executable mmaker
                      , wai-websockets
                      , wai-extra
                      , wai-middleware-static
-                     , websockets
                      , scotty
-                     , bytestring
                      , text
-                     , stm
-                     , unagi-chan
                      , random
                      , aeson
                      , containers
+                     , text
+                     , websockets
+                     , unagi-chan
                      , uuid
                      , async
+                     , bytestring
+                     , stm
 
 test-suite test
   type:                exitcode-stdio-1.0
   hs-source-dirs:      tests
   main-is:             TestMain.hs
   ghc-options:         -Wall
-  -- default-extensions: 
+  -- default-extensions:
   default-language:    Haskell2010
   build-depends:       base
                      , mmaker
                      , hspec
                      , QuickCheck
+                     , random
+                     , aeson
+                     , containers
+                     , text
+                     , websockets
+                     , unagi-chan
+                     , uuid
+                     , async
+                     , bytestring
+                     , stm

@@ -92,8 +92,8 @@ spec = do
     describe "playDealer" $ do
       it "should do the right thing" $ do
         playDealer [Card Queen Clubs] [Card Six Hearts, Card Seven Hearts]
-          `shouldBe` [Card Seven Hearts, Card Six Hearts, Card Queen Clubs]
+          `shouldBe` ([Card Seven Hearts, Card Six Hearts, Card Queen Clubs], [])
         playDealer [Card King Clubs] [Card Ace Hearts, Card King Diamonds]
-          `shouldBe` [Card Ace Hearts, Card King Clubs]
+          `shouldBe` ([Card Ace Hearts, Card King Clubs], [Card King Diamonds])
         playDealer [Card Jack Spades] [Card Eight Spades,Card Seven Spades]
-          `shouldBe` [Card Eight Spades, Card Jack Spades]
+          `shouldBe` ([Card Eight Spades, Card Jack Spades], [Card Seven Spades])

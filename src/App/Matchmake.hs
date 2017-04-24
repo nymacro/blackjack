@@ -93,11 +93,11 @@ takeAllPlayers world =
 -- | Find game
 -- Will return existing Lobby if still waiting for players, otherwise will run
 -- the game and return the new lobby to use for new players.
-findGame :: Int                         -- ^ Maximum number of players for a game
-         -> Lobby                       -- ^ Lobby state
-         -> TVar World                  -- ^ World state
-         -> (Game -> IO ())               -- ^ Game loop
-         -> IO (MVar (Async (), Game))   -- ^ Found game
+findGame :: Int                        -- ^ Maximum number of players for a game
+         -> Lobby                      -- ^ Lobby state
+         -> TVar World                 -- ^ World state
+         -> (Game -> IO ())            -- ^ Game loop
+         -> IO (MVar (Async (), Game)) -- ^ Found game
 findGame numPlayers lobby world runGame = do
   players <- takePlayers numPlayers world
 
@@ -146,10 +146,10 @@ findGame numPlayers lobby world runGame = do
           return l
 
 -- | Generic matchmaking websockets app
-wsMatchmake :: User          -- ^ Joining user
-            -> Lobby         -- ^ Lobby state
-            -> TVar World    -- ^ World state
-            -> Int           -- ^ Player count
+wsMatchmake :: User            -- ^ Joining user
+            -> Lobby           -- ^ Lobby state
+            -> TVar World      -- ^ World state
+            -> Int             -- ^ Player count
             -> (Game -> IO ()) -- ^ Game loop
             -> IO ()
 wsMatchmake user@(User _ _ conn) lobby world numPlayers runGame = do
@@ -162,16 +162,17 @@ wsMatchmake user@(User _ _ conn) lobby world numPlayers runGame = do
       Nothing -> return ()
       Just c  -> do
         -- make sure we tell the game when a user disconnects
-        let fin = writeChan bcast (user, "DISCONNECT") >> putStrLn ("Client left " <> show user)
+        let disconnect = writeChan bcast (user, GameMsgDisconnect)
+            fin        = disconnect >> putStrLn ("Client left " <> show user)
         flip finally fin $
           forever $ do
             -- start a timeout thread to ensure activity
             timer <- async $ do
-              threadDelay $ 10 * 1000000 -- 10 seconds
-              writeChan bcast (user, "DISCONNECT")
+              threadDelay $ 15 * 1000000 -- 15 seconds
+              disconnect
             flip finally (cancel timer) $ do
               d <- receiveData c
-              writeChan bcast (user, d)
+              writeChan bcast (user, GameMsgData d)
 
   -- wait for game to finish and clean up
   wait main
