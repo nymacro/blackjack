@@ -15,6 +15,11 @@
         background-repeat: no-repeat;
         background-color: #308834;
       }
+      .winner-highlight {
+        padding: 8px;
+        background-color: #008080;
+        border: 2px solid #00ffff;
+      }
       .player-hand {
         background-color: #1a4a1c;
       }
@@ -29,7 +34,7 @@
         color: black;
       }
       .list {
-        display: inline-block;        
+        display: inline-block;
       }
       .list-enter-active, .list-leave-active {
         transition: all 0.5s linear;
@@ -77,16 +82,16 @@
 
       <div id="game-content">
         <div id="player-name"></div>
-        
+
         <p/>
-        
+
         <form onsubmit="return false;">
           <div class="btn-group btn-group-lg">
             <input class="btn btn-primary" type="submit" id="tapButton" value="Tap" />
             <input class="btn btn-danger" type="submit" id="sitButton" value="Sit" />
           </div>
         </form>
-        
+
         <h2>Your Hand</h2>
         <div class="well well-sm" style="margin-bottom:0px;">
           <div id="cards">
@@ -97,14 +102,14 @@
             </transition-group>
           </div>
         </div>
-        
+
         <h2>Other's Hands</h2>
         <div class="well well-sm" style="margin-bottom:0px;">
           <div id="others">
 
           </div>
         </div>
-        
+
       </div>
 
       <h2>Messages</h2>

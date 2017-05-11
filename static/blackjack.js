@@ -45,6 +45,9 @@ function cardImageUrl(card) {
 
 function clearGame() {
     dealVue.reset();
+
+    var hand = document.getElementById("cards");
+    hand.classList.remove("winner-highlight");
     // while (hand.firstChild) {
     //     hand.removeChild(hand.firstChild);
     // }
@@ -165,7 +168,29 @@ function onMessage(evt) {
         addCard(msg.data);
     } else if (msg.type == "done") {
         websocket.close();
-        // TODO show winner[s] in a nice way
+
+        // display winner[s]
+        if (msg.data.length == 0) {
+            // no winners
+            writeToScreen('No winners');
+        } else {
+            // winner[s]
+            var winningValue = msg.data[0][0];
+            var winningUsers = msg.data.map(function(x) { return x[1].name; });
+            writeToScreen("Winning user[s]: " + winningUsers);
+
+            // highlight users
+            winningUsers.forEach(function(name) {
+                console.log(name);
+                var hand;
+                if (name == nameInput.value) {
+                    hand = document.getElementById("cards");
+                } else {
+                    hand = document.getElementById("player_" + name);
+                }
+                hand.classList.add("winner-highlight");
+            });
+        }
     }
 }
 
