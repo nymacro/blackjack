@@ -86,7 +86,7 @@ newDealer = BlackjackUser <$> newUser "Dealer" Nothing <*> pure True <*> pure []
 
 -- | Main game loop for running Blackjack game
 runGame :: Game -> IO ()
-runGame game@(Game _ bcast oc) = do
+runGame game@(Game _ _ oc) = do
   putStrLn "Running Blackjack Game"
   print game
 
@@ -138,7 +138,7 @@ runGame game@(Game _ bcast oc) = do
     forM_ cards $ \c -> safeSendM conn $ message "deal" (DealMessage user c)
 
   -- main game loop
-  let loop = do
+  let go = do
         (user@(User _ _ conn), msg) <- readChan oc
         case msg of
           GameMsgDisconnect -> atomically $ sitUserSTM bj user
@@ -201,7 +201,7 @@ runGame game@(Game _ bcast oc) = do
               sendTo (const True) (gameUsers game) $ message "done" (DoneMessage winner)
               return ()
 
-        if not finished
-          then loop
-          else final
-  loop
+        if finished
+          then final
+          else go
+  go

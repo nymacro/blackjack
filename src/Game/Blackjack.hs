@@ -1,10 +1,11 @@
 module Game.Blackjack where
 
 import           Control.Monad
-import           Data.Foldable (maximumBy)
+import           Data.Foldable         (maximumBy)
 import           Data.Functor
-import           Data.List     (partition, sort, sortBy)
-import           Data.Maybe    (mapMaybe)
+import           Data.Functor.Identity
+import           Data.List             (partition, sort, sortBy)
+import           Data.Maybe            (mapMaybe)
 import           Data.Monoid
 
 import           System.Random
