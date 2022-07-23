@@ -1,4 +1,4 @@
-var wsUri = "wss://" + document.location.host + "/blackjack";
+var wsUri = "ws://" + document.location.host + "/blackjack";
 
 var websocket;
 
