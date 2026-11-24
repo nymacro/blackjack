@@ -1,8 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 module App.Matchmake (wsMatchmake, disconnectGame, Lobby, newLobby) where
 
-import           Data.Monoid
-
 import           Control.Concurrent            hiding (newChan, writeChan)
 import           Control.Concurrent.Async
 import           Control.Concurrent.Chan.Unagi

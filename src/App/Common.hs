@@ -3,15 +3,12 @@
 module App.Common where
 
 import           Data.ByteString               (ByteString)
-import           Data.Monoid
 import           Data.Text                     (Text)
 import qualified Data.UUID                     as UUID (UUID)
 import qualified Data.UUID.V4                  as UUID
 
-import           Control.Concurrent
-import           Control.Concurrent.Async
 import           Control.Concurrent.Chan.Unagi
-import           Control.Exception             (catch, try)
+import           Control.Exception             (catch)
 import           Control.Monad                 (forM_)
 
 import           Network.WebSockets

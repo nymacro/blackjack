@@ -1,7 +1,6 @@
 module Game.BlackjackSpec where
 
 import           Test.Hspec
-import           Test.QuickCheck
 
 import           Game.Blackjack
 
@@ -49,8 +48,8 @@ spec = do
             hand2 = [Card Ace Spades, Card Five Hearts, Card Five Clubs]
         pickWinner [hand1, hand2] `shouldBe` [(21, hand1)]
       it "should return Nothing on all bust" $ do
-        let bust = [Card King Spades, Card King Clubs, Card King Hearts]
-        pickWinner [bust] `shouldBe` []
+        let bustHand = [Card King Spades, Card King Clubs, Card King Hearts]
+        pickWinner [bustHand] `shouldBe` []
 
     describe "tap" $ do
       it "should handle empty list" $ do
@@ -83,11 +82,11 @@ spec = do
       it "should handle empty list" $ do
         combinations ([] :: [[Int]]) `shouldBe` []
       it "should do correct combinations" $ do
-        combinations [[1]] `shouldBe` [[1]]
-        combinations [[1], [2]] `shouldBe` [[1, 2]]
-        combinations [[1], [2], [3]] `shouldBe` [[1, 2, 3]]
-        combinations [[1], [2, 3]] `shouldBe` [[1, 2], [1, 3]]
-        combinations [[1, 10], [2, 3]] `shouldBe` [[1, 2], [1, 3], [10, 2], [10, 3]]
+        combinations [[1]] `shouldBe` ([[1]] :: [[Int]])
+        combinations [[1], [2]] `shouldBe` ([[1, 2]] :: [[Int]])
+        combinations [[1], [2], [3]] `shouldBe` ([[1, 2, 3]] :: [[Int]])
+        combinations [[1], [2, 3]] `shouldBe` ([[1, 2], [1, 3]] :: [[Int]])
+        combinations [[1, 10], [2, 3]] `shouldBe` ([[1, 2], [1, 3], [10, 2], [10, 3]] :: [[Int]])
 
     describe "playDealer" $ do
       it "should do the right thing" $ do

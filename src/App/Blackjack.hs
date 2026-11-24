@@ -32,8 +32,8 @@ data BlackjackGame = BlackjackGame { bjUsers :: [BlackjackUser]
 
 
 instance ToJSON User where
-  toJSON (User  username uuid _) = object [ "name" .= String username
-                                          , "uuid" .= String (UUID.toText uuid) ]
+  toJSON (User  username uuid _) = object [ "name" .= username
+                                          , "uuid" .= UUID.toText uuid ]
   toEncoding (User username uuid _) = pairs ("name" .= username <>
                                              "uuid" .= UUID.toText uuid)
 
@@ -41,10 +41,10 @@ instance ToJSON BlackjackUser where
   toJSON (BlackjackUser u _ _) = toJSON u
 
 instance ToJSON Rank where
-  toJSON rank = String (Text.pack $ show rank)
+  toJSON rank = toJSON (Text.pack $ show rank)
 
 instance ToJSON Suit where
-  toJSON suit = String (Text.pack $ show suit)
+  toJSON suit = toJSON (Text.pack $ show suit)
 
 instance ToJSON Card where
   toJSON (Card rank suit) = object [ "rank" .= rank
