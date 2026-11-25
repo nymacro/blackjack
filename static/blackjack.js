@@ -1,4 +1,5 @@
-var wsUri = "ws://" + document.location.host + "/blackjack";
+const wsProto = (window.location.protocol === 'https:') ? "wss://" : "ws://";
+var wsUri = wsProto + document.location.host + "/blackjack";
 
 var websocket;
 
